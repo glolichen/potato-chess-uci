@@ -21,7 +21,7 @@ int main() {
 	maps::init();
 	hash::init();
 
-	book::book_open("/home/jayden/Desktop/Programs/potato-chess/potato-chess-uci/books/Titans.bin");
+	book::book_open("/home/jayden/Desktop/Programs/potato-chess/potato-chess-uci/books/Book.bin");
 
 	while (true) {
 		skip:

@@ -4,6 +4,7 @@
 #include <limits.h>
 #include <unordered_map>
 #include <tuple>
+#include <queue>
 #include <vector>
 
 #include "bitboard.h"
@@ -12,7 +13,6 @@
 #include "maps.h"
 #include "movegen.h"
 #include "search.h"
-#include "book.h"
 
 /*
 add soon:
@@ -23,6 +23,7 @@ add soon:
 
 #define DELTA_CUTOFF 900
 #define QUISCENCE_DEPTH 5
+#define TT_SIZE_MB 512
 const int SEARCH_EXPIRED = INT_MIN + 500;
 
 struct TTResult {
@@ -33,7 +34,36 @@ bool top_move_null;
 int bestMove;
 
 // std::tuple as key in unordered map: https://stackoverflow.com/a/20835070
-std::unordered_map<ull, TTResult> transposition;
+std::unordered_map<hashdefs::ZobristTuple, TTResult, hashdefs::ZobristTupleHash> transposition;
+std::queue<hashdefs::ZobristTuple> hashKeys;
+
+const ull maxSize = TT_SIZE_MB * 1024 * 1024;
+/*
+let a = size of zobrist tuple
+let b = size of ttresult
+let k = max size
+let x = max entries
+
+S_transposition = x(a + b) = ax + bx
+S_hashKeys = ax
+
+S_transposition + S_hashKeys = k
+ax + bx + ax = k
+2ax + bx = k
+x(2a + b) = k
+x = k/(2a + b)
+*/
+const int maxElements = maxSize / (2 * sizeof(hashdefs::ZobristTuple) + sizeof(TTResult));
+
+void table_insert(hashdefs::ZobristTuple hashes, TTResult result) {
+	if (transposition.size() >= maxElements) {
+		hashdefs::ZobristTuple out = hashKeys.back();
+		hashKeys.pop();
+		transposition.erase(out);
+	}
+	transposition.insert({ hashes, result });
+	hashKeys.push(hashes);
+}
 
 ull limit;
 
@@ -76,7 +106,7 @@ int quiescence(const bitboard::Position &board, int alpha, int beta, int depth) 
 	return alpha;
 }
 
-int search::minimax(bitboard::Position &board, int depth, int alpha, int beta, int depth_from_start) {
+int search::minimax(const bitboard::Position &board, int depth, int alpha, int beta, int depth_from_start) {
 	ull now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 	if (now >= limit)
 		return SEARCH_EXPIRED;
@@ -114,7 +144,7 @@ int search::minimax(bitboard::Position &board, int depth, int alpha, int beta, i
 	if (board.fifty_move_clock >= 50)
 		return 0;
 
-	ull hashes = book::gen_polyglot_key(board);
+	hashdefs::ZobristTuple hashes = hash::hash(board);
 	if (transposition.count(hashes)) {
 		TTResult prev = transposition.at(hashes);
 		if (prev.depth > depth)
@@ -165,7 +195,7 @@ int search::minimax(bitboard::Position &board, int depth, int alpha, int beta, i
 	}
 
 	if (transposition.count(hashes) == 0)
-		transposition.insert({ hashes, { evaluation, top_move, depth } });
+		table_insert(hashes, { evaluation, top_move, depth });
 	else {
 		TTResult prev = transposition.at(hashes);
 		if (depth > prev.depth)
@@ -264,7 +294,7 @@ search::SearchResult search::search(bitboard::Position &board, int time_MS) {
 		depth++;
 	}
 
-	transposition.clear();
+	// transposition.clear();
 
 	return { best.first, depth, best.second, is_mate };
 }
