@@ -14,6 +14,7 @@
 #include "perft.h"
 #include "search.h"
 #include "book.h"
+#include "timeman.h"
 
 int main() {
 	srand(time(0));
@@ -22,6 +23,8 @@ int main() {
 	hash::init();
 
 	book::book_open("/home/jayden/Desktop/Programs/potato-chess/potato-chess-uci/books/Book.bin");
+
+	int totalHalfMoves = 0;
 
 	while (true) {
 		skip:
@@ -39,6 +42,7 @@ int main() {
 		else if (token == "uci")
 			std::cout << "id name Potato Chess\nid author Jayden Li\nuciok\n";
 		else if (token == "position") {
+			totalHalfMoves = 0;
 			ss >> token;
 			if (token == "startpos")
 				bitboard::decode("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
@@ -59,6 +63,7 @@ int main() {
 						ss >> token;
 						int move = move::uci_to_move(bitboard::board, token);
 						move::make_move(bitboard::board, move);
+						totalHalfMoves++;
 
 						// std::cout << move::to_string(move) << "\n";
 						// bitboard::print_board(bitboard::board);
@@ -67,12 +72,16 @@ int main() {
 			}
 		}
 		else if (token == "go") {			
-			int wtime = -1, btime = -1, movetime = -1, depth = -1;
+			int wtime = -1, btime = -1, winc = -1, binc = -1, movetime = -1, depth = -1;
 			while (ss >> token) {
 				if (token == "wtime")
 					ss >> wtime;
 				else if (token == "btime")
 					ss >> btime;
+				else if (token == "winc")
+					ss >> winc;
+				else if (token == "binc")
+					ss >> binc;
 				else if (token == "movetime")
 					ss >> movetime;
 				else if (token == "perft") {
@@ -107,8 +116,13 @@ int main() {
 					res = search::search(bitboard::board, movetime);
 				else if (depth != -1)
 					res = search::search(bitboard::board, -depth);
-				else
-					res = search::search(bitboard::board, 3000);
+				else {
+					int remainingTime = bitboard::board.turn ? btime : wtime;
+					int inc = bitboard::board.turn ? binc : winc;
+					int baseTime = timeman::calc_base_time(remainingTime, totalHalfMoves / 2);
+					// std::cout << baseTime << "\n";
+					res = search::search(bitboard::board, baseTime + inc);
+				}
 				move = res.move;
 			}
 

@@ -24,6 +24,8 @@ add soon:
 #define DELTA_CUTOFF 900
 #define QUISCENCE_DEPTH 5
 #define TT_SIZE_MB 512
+#define NODES_PER_TIME_CHECK 8192
+
 const int SEARCH_EXPIRED = INT_MIN + 500;
 
 struct TTResult {
@@ -67,18 +69,26 @@ void table_insert(hashdefs::ZobristTuple hashes, TTResult result) {
 
 ull limit;
 
-// algorithm from: https://www.chessprogramming.org/Quiescence_Search
-int quiescence(const bitboard::Position &board, int alpha, int beta, int depth) {
+ull nodes;
+bool is_time_up() {
 	ull now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 	if (now >= limit)
+		return true;
+	return false;
+}
+
+// algorithm from: https://www.chessprogramming.org/Quiescence_Search
+int quiescence(const bitboard::Position &board, int alpha, int beta, int depth) {
+	nodes++;
+	if (nodes & (NODES_PER_TIME_CHECK - 1) == (NODES_PER_TIME_CHECK - 1) && is_time_up())
 		return SEARCH_EXPIRED;
 
 	int doNothingScore = eval::evaluate(board) * (board.turn ? -1 : 1);
 	if (doNothingScore >= beta)
 		return beta;
 
-	// if (alpha <= INT_MIN + 1 && alpha >= INT_MAX - 1 && eval < alpha - DELTA_CUTOFF)
-	// 	return alpha;
+	if (alpha <= INT_MIN + 1 && alpha >= INT_MAX - 1 && doNothingScore < alpha - DELTA_CUTOFF)
+		return alpha;
 
 	alpha = std::max(doNothingScore, alpha);
 	
@@ -107,8 +117,8 @@ int quiescence(const bitboard::Position &board, int alpha, int beta, int depth) 
 }
 
 int search::minimax(const bitboard::Position &board, int depth, int alpha, int beta, int depth_from_start) {
-	ull now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-	if (now >= limit)
+	nodes++;
+	if (nodes & (NODES_PER_TIME_CHECK - 1) == (NODES_PER_TIME_CHECK - 1) && is_time_up())
 		return SEARCH_EXPIRED;
 
 	std::vector<int> moves;
@@ -243,7 +253,8 @@ search::SearchResult search::search(bitboard::Position &board, int time_MS) {
 		depth = searchDepth;
 	bool is_mate = false;
 
-	while (true) {		
+	while (true) {
+		nodes = 0;
 		int eval = search::minimax(board, depth, INT_MIN, INT_MAX, 0);
 		top_move_null = false;
 
@@ -252,7 +263,7 @@ search::SearchResult search::search(bitboard::Position &board, int time_MS) {
 			break;
 		}
 
-		std::cout << "info depth " << std::to_string(depth) << " currmove " << move::to_string(bestMove) << " score ";
+		std::cout << "info depth " << std::to_string(depth) << " nodes " << nodes << " currmove " << move::to_string(bestMove) << " score ";
 
 		best.first = bestMove;
 		best.second = eval;
