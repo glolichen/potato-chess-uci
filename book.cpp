@@ -274,8 +274,8 @@ ull book::gen_polyglot_key(bitboard::Position &board) {
 		castle ^= RANDOM[CASTLE + 3];
 
 	ull enpassant = 0;
-	if (board.en_passant != -1)
-		enpassant = RANDOM[EP + 7 - (board.en_passant % 8)];
+	if (board.enPassant != -1)
+		enpassant = RANDOM[EP + 7 - (board.enPassant % 8)];
 
 	ull turn = 0;
 	if (board.turn == WHITE)

@@ -71,11 +71,11 @@ void move::make_move(bitboard::Position &board, int move) {
 	int source = SOURCE(move);
 	int dest = DEST(move);
 	int promote = PROMOTE(move);
-	board.en_passant = -1;
+	board.enPassant = -1;
 
 	if (IS_EP(move)) {
 		int captured = dest + (board.turn ? 8 : -8);
-		SET0(board.all_pieces, captured);
+		SET0(board.allPieces, captured);
 		if (board.turn) {
 			SET0(board.pieces[WHITE][PAWN], captured);
 			SET0(board.pieces[WHITE][ALL], captured);
@@ -90,16 +90,16 @@ void move::make_move(bitboard::Position &board, int move) {
 
 	if (board.turn && board.mailbox[source] == PAWN + 6 && source - dest == 16) {
 		if (board.mailbox[dest - 1] == PAWN || board.mailbox[dest + 1] == PAWN)
-			board.en_passant = dest + 8;
+			board.enPassant = dest + 8;
 	}
 	else if (!board.turn && board.mailbox[source] == PAWN && dest - source == 16) {
 		if (board.mailbox[dest - 1] == PAWN + 6 || board.mailbox[dest + 1] == PAWN + 6)
-			board.en_passant = dest - 8;
+			board.enPassant = dest - 8;
 	}
 
 	if (promote) {
-		SET1(board.all_pieces, dest);
-		SET0(board.all_pieces, source);
+		SET1(board.allPieces, dest);
+		SET0(board.allPieces, source);
 		if (board.turn == BLACK) {
 			if (board.mailbox[dest] != -1) {
 				SET0(board.pieces[WHITE][board.mailbox[dest]], dest);
@@ -135,8 +135,8 @@ void move::make_move(bitboard::Position &board, int move) {
 		board.mailbox[source] = -1;
 	}
 	else {
-		SET1(board.all_pieces, dest);
-		SET0(board.all_pieces, source);
+		SET1(board.allPieces, dest);
+		SET0(board.allPieces, source);
 		if (board.turn) {
 			if (board.mailbox[dest] != -1) {
 				SET0(board.pieces[WHITE][board.mailbox[dest]], dest);
@@ -181,29 +181,29 @@ void move::make_move(bitboard::Position &board, int move) {
 
 		int castle = CASTLE(move);
 		if (castle) {
-			int rook_source, rook_dest;
+			int rookSource, rookDest;
 			if (board.turn) {
-				rook_source = castle == 1 ? 56 : 63;
-				rook_dest = castle == 1 ? 58 : 60;
-				SET1(board.pieces[BLACK][ROOK], rook_dest);
-				SET0(board.pieces[BLACK][ROOK], rook_source);
-				SET1(board.pieces[BLACK][ALL], rook_dest);
-				SET0(board.pieces[BLACK][ALL], rook_source);
+				rookSource = castle == 1 ? 56 : 63;
+				rookDest = castle == 1 ? 58 : 60;
+				SET1(board.pieces[BLACK][ROOK], rookDest);
+				SET0(board.pieces[BLACK][ROOK], rookSource);
+				SET1(board.pieces[BLACK][ALL], rookDest);
+				SET0(board.pieces[BLACK][ALL], rookSource);
 			}
 			else {
-				rook_source = castle == 1 ? 0 : 7;
-				rook_dest = castle == 1 ? 2 : 4;
-				SET1(board.pieces[WHITE][ROOK], rook_dest);
-				SET0(board.pieces[WHITE][ROOK], rook_source);
-				SET1(board.pieces[WHITE][ALL], rook_dest);
-				SET0(board.pieces[WHITE][ALL], rook_source);
+				rookSource = castle == 1 ? 0 : 7;
+				rookDest = castle == 1 ? 2 : 4;
+				SET1(board.pieces[WHITE][ROOK], rookDest);
+				SET0(board.pieces[WHITE][ROOK], rookSource);
+				SET1(board.pieces[WHITE][ALL], rookDest);
+				SET0(board.pieces[WHITE][ALL], rookSource);
 			}
 
-			SET1(board.all_pieces, rook_dest);
-			SET0(board.all_pieces, rook_source);
+			SET1(board.allPieces, rookDest);
+			SET0(board.allPieces, rookSource);
 
-			board.mailbox[rook_dest] = ROOK + (board.turn ? 6 : 0);
-			board.mailbox[rook_source] = -1;
+			board.mailbox[rookDest] = ROOK + (board.turn ? 6 : 0);
+			board.mailbox[rookSource] = -1;
 		}
 
 		board.mailbox[dest] = board.mailbox[source];

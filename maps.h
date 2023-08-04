@@ -9,8 +9,8 @@ namespace maps {
 	extern ull rook[64][4];
 	extern ull bishop[64][4];
 	extern ull fill[64][64];
-	extern std::unordered_map<int, ull> pinned_offsets[6][64];
-	extern std::unordered_map<int, ull> pinned_offsets_all[64];
+	extern std::unordered_map<int, ull> pinnedOffsets[6][64];
+	extern std::unordered_map<int, ull> pinnedOffsetsAll[64];
 	
 	void init();
 }

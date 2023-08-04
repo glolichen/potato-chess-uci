@@ -7,7 +7,7 @@
 namespace book {
 	ull gen_polyglot_key(bitboard::Position &board);
 
-	void book_open(const char file_name[]);
+	void book_open(const char fileName[]);
 	int book_move(bitboard::Position &board);
 }
 

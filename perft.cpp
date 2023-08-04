@@ -32,10 +32,10 @@ ull perft::perft(const bitboard::Position &board, int depth, bool first) {
 			std::cout << move::to_string(move) << ": ";
 		}
 
-		bitboard::Position new_board;
-		memcpy(&new_board, &board, sizeof(board));
-		move::make_move(new_board, move);
-		positions += perft::perft(new_board, depth - 1, false);
+		bitboard::Position newBoard;
+		memcpy(&newBoard, &board, sizeof(board));
+		move::make_move(newBoard, move);
+		positions += perft::perft(newBoard, depth - 1, false);
 
 		if (first) {
 			std::cout << (positions - old) << "\n";

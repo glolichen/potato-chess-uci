@@ -21,7 +21,7 @@ add soon:
  * std map to unordered map
 */
 
-#define DELTA_CUTOFF 900
+#define DELTA_CUTOFF 800
 #define QUISCENCE_DEPTH 5
 #define TT_SIZE_MB 512
 #define NODES_PER_TIME_CHECK 8192
@@ -32,8 +32,8 @@ struct TTResult {
 	int eval, move, depth;
 };
 
-bool top_move_null;
-int bestMove;
+bool topMoveNull;
+int bestMove, secondBestMove;
 
 // std::tuple as key in unordered map: https://stackoverflow.com/a/20835070
 std::unordered_map<hashdefs::ZobristTuple, TTResult, hashdefs::ZobristTupleHash> transposition;
@@ -124,7 +124,7 @@ int search::minimax(const bitboard::Position &board, int depth, int alpha, int b
 	std::vector<int> moves;
 	movegen::move_gen_with_ordering(board, moves);
 
-	if (depth_from_start == 0 && !top_move_null) {
+	if (depth_from_start == 0 && !topMoveNull) {
 		for (int i = 0; i < moves.size(); i++) {
 			if (moves[i] == bestMove) {
 				moves.erase(moves.begin() + i);
@@ -151,7 +151,7 @@ int search::minimax(const bitboard::Position &board, int depth, int alpha, int b
 		// return eval::evaluate(board);
 	}
 
-	if (board.fifty_move_clock >= 50)
+	if (board.fiftyMoveClock >= 50)
 		return 0;
 
 	hashdefs::ZobristTuple hashes = hash::hash(board);
@@ -168,14 +168,14 @@ int search::minimax(const bitboard::Position &board, int depth, int alpha, int b
 		}
 	}
 
-	int top_move, evaluation = board.turn ? INT_MAX : INT_MIN;
+	int topMove, evaluation = board.turn ? INT_MAX : INT_MIN;
 	for (const int &move : moves) {
 		bitboard::Position new_board;
 		memcpy(&new_board, &board, sizeof(board));
 		if (board.mailbox[DEST(move)] != -1 || board.mailbox[SOURCE(move)] == PAWN || board.mailbox[SOURCE(move)] == PAWN + 6)
-			new_board.fifty_move_clock = 0;
+			new_board.fiftyMoveClock = 0;
 		else
-			new_board.fifty_move_clock++;
+			new_board.fiftyMoveClock++;
 		move::make_move(new_board, move);
 
 		int cur_eval = search::minimax(new_board, depth - 1, alpha, beta, depth_from_start + 1);
@@ -185,7 +185,7 @@ int search::minimax(const bitboard::Position &board, int depth, int alpha, int b
 		if (!board.turn) { // white
 			if (cur_eval > evaluation) {
 				evaluation = cur_eval;
-				top_move = move;
+				topMove = move;
 			}
 
 			if (evaluation >= beta)
@@ -195,7 +195,7 @@ int search::minimax(const bitboard::Position &board, int depth, int alpha, int b
 		else { // black
 			if (cur_eval < evaluation) {
 				evaluation = cur_eval;
-				top_move = move;
+				topMove = move;
 			}
 
 			if (evaluation <= alpha)
@@ -205,15 +205,15 @@ int search::minimax(const bitboard::Position &board, int depth, int alpha, int b
 	}
 
 	if (transposition.count(hashes) == 0)
-		table_insert(hashes, { evaluation, top_move, depth });
+		table_insert(hashes, { evaluation, topMove, depth });
 	else {
 		TTResult prev = transposition.at(hashes);
 		if (depth > prev.depth)
-			transposition[hashes] = { evaluation, top_move, depth };
+			transposition[hashes] = { evaluation, topMove, depth };
 	}
 
 	if (depth_from_start == 0)
-		bestMove = top_move;
+		bestMove = topMove;
 
 	return evaluation;
 }
@@ -237,7 +237,7 @@ search::SearchResult search::search(bitboard::Position &board, int time_MS) {
 	else
 		time = time_MS;
 
-	top_move_null = true;
+	topMoveNull = true;
 
 	eval::init();
 	hash::init();
@@ -256,7 +256,7 @@ search::SearchResult search::search(bitboard::Position &board, int time_MS) {
 	while (true) {
 		nodes = 0;
 		int eval = search::minimax(board, depth, INT_MIN, INT_MAX, 0);
-		top_move_null = false;
+		topMoveNull = false;
 
 		if (eval == SEARCH_EXPIRED) {
 			depth--;

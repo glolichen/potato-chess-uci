@@ -35,7 +35,7 @@ std::vector<std::string> bitboard::split(std::string str, char split_on) {
 void bitboard::decode(std::string fen) {
 	for (int i = 0; i < 64; i++)
 		board.mailbox[i] = -1;
-	board.all_pieces = 0ull;
+	board.allPieces = 0ull;
 	for (int i = 0; i < 2; i++) {
 		for (int j = 0; j < 7; j++)
 			board.pieces[i][j] = 0ull;
@@ -43,9 +43,9 @@ void bitboard::decode(std::string fen) {
 	for (int i = 0; i < 4; i++)
 		board.castle[i] = false;
 	board.turn = 0;
-	board.en_passant = -1;
-	board.fifty_move_clock = 0;
-	board.full_move = 0;
+	board.enPassant = -1;
+	board.fiftyMoveClock = 0;
+	board.fullMove = 0;
 
 	std::vector<std::string> splitted = bitboard::split(fen, ' ');
 
@@ -55,8 +55,8 @@ void bitboard::decode(std::string fen) {
 		board.turn = BLACK;
 
 	try {
-		board.fifty_move_clock = stoi(splitted[4]);
-		board.full_move = stoi(splitted[5]);
+		board.fiftyMoveClock = stoi(splitted[4]);
+		board.fullMove = stoi(splitted[5]);
 	}
 	catch (...) { }
 
@@ -75,13 +75,13 @@ void bitboard::decode(std::string fen) {
 	if (ep.compare("-")) {
 		for (int i = 0; i < 64; i++) {
 			if (ep == squares[i]) {
-				board.en_passant = i;
+				board.enPassant = i;
 				break;
 			}
 		}
 	}
 	else
-		board.en_passant = -1;
+		board.enPassant = -1;
 
 	std::vector<std::string> line = split(splitted[0], '/');
 
@@ -94,7 +94,7 @@ void bitboard::decode(std::string fen) {
 				continue;
 			}
 
-			SET1(board.all_pieces, 63 - (i * 8 + cur));
+			SET1(board.allPieces, 63 - (i * 8 + cur));
 
 			int piece = bitboard::pieces.find(cur_rank[j]);
 			board.mailbox[63 - (i * 8 + cur)] = piece;
@@ -118,7 +118,7 @@ std::string bitboard::encode(const bitboard::Position &board) {
 		int empty = 0;
 		for (int j = 0; j < 8; j++) {
 			int index = 63 - (i * 8 + j);
-			if (QUERY(board.all_pieces, index)) {
+			if (QUERY(board.allPieces, index)) {
 				if (empty != 0)
 					fen += empty + '0';
 				empty = 0;
@@ -164,13 +164,13 @@ std::string bitboard::encode(const bitboard::Position &board) {
 
 	fen += castle_rights + " ";
 
-	if (board.en_passant == -1)
+	if (board.enPassant == -1)
 		fen += "-";
 	else
-		fen += bitboard::squares[board.en_passant];
+		fen += bitboard::squares[board.enPassant];
 		
-	fen += " " + std::to_string(board.fifty_move_clock);
-	fen += " " + std::to_string(board.full_move);
+	fen += " " + std::to_string(board.fiftyMoveClock);
+	fen += " " + std::to_string(board.fullMove);
 
 	return fen;
 }
@@ -217,7 +217,7 @@ void bitboard::print_board(const bitboard::Position &board) {
 	std::cout << "\nBlack Kingside: " << board.castle[BLACK_SHORT];
 	std::cout << "    Black Queenside: " << board.castle[BLACK_LONG];
 
-	std::cout << "\nEn Passant Square: " << (board.en_passant == -1 ? "None" : bitboard::squares[board.en_passant]);
+	std::cout << "\nEn Passant Square: " << (board.enPassant == -1 ? "None" : bitboard::squares[board.enPassant]);
 	std::cout << "\nTurn: " << (board.turn ? "Black" : "White");
 
 	std::cout << "\n";

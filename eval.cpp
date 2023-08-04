@@ -6,13 +6,13 @@
 #include "bitboard.h"
 #include "eval.h"
 
-int mid_values[6] = { 100, 330, 343, 510, 880,  0 }; // alphazero piece values
-int end_values[6] = { 120, 320, 350, 510, 1000,  0 };
+const int midValues[6] = { 100, 330, 343, 510, 880,  0 }; // alphazero piece values
+const int endValues[6] = { 120, 320, 350, 510, 1000,  0 };
 
 // piece table values from Rofchade by Ronald Friederich
 // https://www.chessprogramming.org/RofChade
 
-int mid_pawn_table[64] = {
+const int midPawnTable[64] = {
 	  0,   0,   0,   0,   0,   0,  0,   0,
 	 98, 134,  61,  95,  68, 126, 34, -11,
 	 -6,   7,  26,  31,  65,  56, 25, -20,
@@ -22,7 +22,7 @@ int mid_pawn_table[64] = {
 	-35,  -1, -20, -23, -15,  24, 38, -22,
 	  0,   0,   0,   0,   0,   0,  0,   0,
 };
-int end_pawn_table[64] = {
+const int endPawnTable[64] = {
 	  0,   0,   0,   0,   0,   0,   0,   0,
 	178, 173, 158, 134, 147, 132, 165, 187,
 	 94, 100,  85,  67,  56,  53,  82,  84,
@@ -33,7 +33,7 @@ int end_pawn_table[64] = {
 	  0,   0,   0,   0,   0,   0,   0,   0,
 };
 
-int mid_knight_table[64] = {
+const int midKnightTable[64] = {
 	-167, -89, -34, -49,  61, -97, -15, -107,
 	 -73, -41,  72,  36,  23,  62,   7,  -17,
 	 -47,  60,  37,  65,  84, 129,  73,   44,
@@ -43,7 +43,7 @@ int mid_knight_table[64] = {
 	 -29, -53, -12,  -3,  -1,  18, -14,  -19,
 	-105, -21, -58, -33, -17, -28, -19,  -23,
 };
-int end_knight_table[64] = {
+const int endKnightTable[64] = {
 	-58, -38, -13, -28, -31, -27, -63, -99,
 	-25,  -8, -25,  -2,  -9, -25, -24, -52,
 	-24, -20,  10,   9,  -1,  -9, -19, -41,
@@ -54,7 +54,7 @@ int end_knight_table[64] = {
 	-29, -51, -23, -15, -22, -18, -50, -64,
 };
 
-int mid_bishop_table[64] = {
+const int midBishopTable[64] = {
 	-29,   4, -82, -37, -25, -42,   7,  -8,
 	-50,  16, -18, -13,  30,  59,  18, -50,
 	-16,  37,  43,  40,  35,  50,  37,  -2,
@@ -64,7 +64,7 @@ int mid_bishop_table[64] = {
 	  4,  15,  16,   0,   7,  21,  33,   1,
 	-33,  -3, -14, -21, -13, -12, -39, -21,
 };
-int end_bishop_table[64] = {
+const int endBishopTable[64] = {
 	-14, -21, -11,  -8, -7,  -9, -17, -24,
 	 -8,  -4,   7, -12, -3, -13,  -4, -14,
 	  2,  -8,   0,  -1, -2,   6,   0,   4,
@@ -75,7 +75,7 @@ int end_bishop_table[64] = {
 	-23,  -9, -23,  -5, -9, -16,  -5, -17,
 };
 
-int mid_rook_table[64] = {
+const int midRookTable[64] = {
 	 32,  42,  32,  51, 63,  9,  31,  43,
 	 27,  32,  58,  62, 80, 67,  26,  44,
 	 -5,  19,  26,  36, 17, 45,  61,  16,
@@ -85,7 +85,7 @@ int mid_rook_table[64] = {
 	-44, -16, -20,  -9, -1, 11,  -6, -71,
 	-19, -13,   1,  17, 16,  7, -37, -26,
 };
-int end_rook_table[64] = {
+const int endRookTable[64] = {
 	13, 10, 18, 15, 12,  12,   8,   5,
 	11, 13, 13, 11, -3,   3,   8,   3,
 	 7,  7,  7,  5,  4,  -3,  -5,  -3,
@@ -96,7 +96,7 @@ int end_rook_table[64] = {
 	-9,  2,  3, -1, -5, -13,   4, -20,
 };
 
-int mid_queen_table[64] = {
+const int midQueenTabke[64] = {
 	-28,   0,  29,  12,  59,  44,  43,  45,
 	-24, -39,  -5,   1, -16,  57,  28,  54,
 	-13, -17,   7,   8,  29,  56,  47,  57,
@@ -106,7 +106,7 @@ int mid_queen_table[64] = {
 	-35,  -8,  11,   2,   8,  15,  -3,   1,
 	 -1, -18,  -9,  20, -15, -25, -31, -50,
 };
-int end_queen_table[64] = {
+const int endQueenTable[64] = {
 	 -9,  22,  22,  27,  27,  19,  10,  20,
 	-17,  20,  32,  41,  58,  25,  30,   0,
 	-20,   6,   9,  49,  47,  35,  19,   9,
@@ -117,7 +117,7 @@ int end_queen_table[64] = {
 	-33, -28, -22, -43,  -5, -32, -20, -41,
 };
 
-int mid_king_table[64] = {
+const int midKingTable[64] = {
 	-65,  23,  16, -15, -56, -34,   2,  13,
 	 29,  -1, -20,  -7,  -8,  -4, -38, -29,
 	 -9,  24,   2, -16, -20,   6,  22, -22,
@@ -127,7 +127,7 @@ int mid_king_table[64] = {
 	  1,   7,  -8, -64, -43, -16,   9,   8,
 	-15,  36,  12, -54,   8, -28,  24,  14,
 };
-int end_king_table[64] = {
+const int endKingTable[64] = {
 	-74, -35, -18, -18, -11,  15,   4, -17,
 	-12,  17,  14,  17,  17,  38,  23,  11,
 	 10,  17,  23,  15,  20,  45,  44,  13,
@@ -138,114 +138,114 @@ int end_king_table[64] = {
 	-53, -34, -21, -11, -28, -14, -24, -43
 };
 
-int *temp_mid_tables[6] = {
-	mid_pawn_table,
-	mid_knight_table,
-	mid_bishop_table,
-	mid_rook_table,
-	mid_queen_table,
-	mid_king_table
+const int *tempMidTables[6] = {
+	midPawnTable,
+	midKnightTable,
+	midBishopTable,
+	midRookTable,
+	midQueenTabke,
+	midKingTable
 };
-int *temp_end_tables[6] = {
-	end_pawn_table,
-	end_knight_table,
-	end_bishop_table,
-	end_rook_table,
-	end_queen_table,
-	end_king_table
+const int *tempEndTables[6] = {
+	endPawnTable,
+	endKnightTable,
+	endBishopTable,
+	endRookTable,
+	endQueenTable,
+	endKingTable
 };
 
-int end_phase_inc[12] = { 0, 0, 1, 1, 1, 1, 2, 2, 4, 4, 0, 0 };
-int midgame_tables[12][64];
-int endgame_tables[12][64];
+int endPhaseInc[12] = { 0, 0, 1, 1, 1, 1, 2, 2, 4, 4, 0, 0 };
+int midgameTables[12][64];
+int endgameTables[12][64];
 
-void flip(int *table_in, int *table_out) {
+void flip(const int *tableIn, int *tableOut) {
 	int rows[8][8];
 	for (int i = 0; i < 8; i++) {
 		for (int j = 0; j < 8; j++)
-			rows[i][j] = table_in[i * 8 + j];
+			rows[i][j] = tableIn[i * 8 + j];
 	}
 
 	for (int i = 0; i < 8; i++) {
 		for (int j = 0; j < 8; j++)
-			table_out[i * 8 + j] = rows[7 - i][j];
+			tableOut[i * 8 + j] = rows[7 - i][j];
 	}
 }
 
 void eval::init() {
 	for (int i = 0; i < 6; i++) {
 		for (int j = 0; j < 64; j++)
-			midgame_tables[i][j] = temp_mid_tables[i][j];
+			midgameTables[i][j] = tempMidTables[i][j];
 	}
 	for (int i = 0; i < 6; i++) {
 		int flipped[64];
-		flip(temp_mid_tables[i], flipped);
+		flip(tempMidTables[i], flipped);
 		for (int j = 0; j < 64; j++)
-			midgame_tables[i + 6][j] = flipped[j];
+			midgameTables[i + 6][j] = flipped[j];
 	}
 
 	for (int i = 0; i < 6; i++) {
 		for (int j = 0; j < 64; j++)
-			endgame_tables[i][j] = temp_end_tables[i][j];
+			endgameTables[i][j] = tempEndTables[i][j];
 	}
 	for (int i = 0; i < 6; i++) {
 		int flipped[64];
-		flip(temp_end_tables[i], flipped);
+		flip(tempEndTables[i], flipped);
 		for (int j = 0; j < 64; j++)
-			endgame_tables[i + 6][j] = flipped[j];
+			endgameTables[i + 6][j] = flipped[j];
 	}
 }
 
 int eval::evaluate(const bitboard::Position &board) {
 	int midgame[2], endgame[2];
-	int midgame_material[2], endgame_material[2];
-	int game_phase = 0;
+	int midgameMaterial[2], endgameMaterial[2];
+	int gamePhase = 0;
 
 	midgame[0] = 0, midgame[1] = 0;
 	endgame[0] = 0, endgame[1] = 0;
-	midgame_material[0] = 0, midgame_material[1] = 0;
-	endgame_material[0] = 0, endgame_material[1] = 0;
+	midgameMaterial[0] = 0, midgameMaterial[1] = 0;
+	endgameMaterial[0] = 0, endgameMaterial[1] = 0;
 
-	std::vector<int> piece_list;
+	std::vector<int> pieceList;
 	for (int side = 0; side <= 1; side++) {
 		for (int i = 0; i < 6; i++) {
 			ull pieces = board.pieces[side][i];
 			while (pieces) {
 				int pos = __builtin_ctzll(pieces);
-				piece_list.push_back(i);
+				pieceList.push_back(i);
 
-				midgame[side] += midgame_tables[i + side * 6][63 - pos];
-				endgame[side] += endgame_tables[i + side * 6][63 - pos];
+				midgame[side] += midgameTables[i + side * 6][63 - pos];
+				endgame[side] += endgameTables[i + side * 6][63 - pos];
 
-				midgame_material[side] += mid_values[i];
-				endgame_material[side] += end_values[i];
+				midgameMaterial[side] += midValues[i];
+				endgameMaterial[side] += endValues[i];
 
-				game_phase += end_phase_inc[i];
+				gamePhase += endPhaseInc[i];
 
 				SET0(pieces, pos);
 			}
 		}
 	}
 
-	if (piece_list.size() < 4) {
-		bool insuf_mat = true;
-		for (const int &piece : piece_list) {
+	if (pieceList.size() < 4) {
+		bool insufMat = true;
+		for (const int &piece : pieceList) {
 			if (piece == PAWN || piece == ROOK || piece == QUEEN) {
-				insuf_mat = false;
+				insufMat = false;
 				break;
 			}
 		}
-		if (insuf_mat)
+		if (insufMat)
 			return 0;
 	}
 
-	int midgame_mat_score = midgame_material[0] - midgame_material[1];
-	int endgame_mat_score = endgame_material[0] - endgame_material[1];
-	int midgame_score = (midgame[0] - midgame[1]) + midgame_mat_score * 1.5;
-	int endgame_score = (endgame[0] - endgame[1]) + endgame_mat_score * 1.5;
+	int midgameMatScore = midgameMaterial[WHITE] - midgameMaterial[BLACK];
+	int endgameMatScore = endgameMaterial[WHITE] - endgameMaterial[BLACK];
+	int midgameScore = (midgame[WHITE] - midgame[BLACK]) + midgameMatScore * 1.5;
+	int endgameScore = (endgame[WHITE] - endgame[BLACK]) + endgameMatScore * 1.5;
 
-	int mid_phase = std::min(game_phase, 24);
-	int end_phase = 24 - mid_phase;
+	int midPhase = std::min(gamePhase, 24);
+	int endPhase = 24 - midPhase;
 
-	return (midgame_score * mid_phase + endgame_score * end_phase) / 24;
+	return (midgameScore * midPhase + endgameScore * endPhase) / 24;
 }
