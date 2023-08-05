@@ -17,7 +17,7 @@ std::string move::to_string(int move) {
 
 	int promote = PROMOTE(move);
 	if (promote)
-		ss << bitboard::pieces[PROMOTE(move) + bool(dest / 8) * 6];
+		ss << bitboard::pieces[PROMOTE(move) + 6];
 
 	return ss.str();
 }

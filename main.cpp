@@ -4,6 +4,7 @@
 #include <ctime>
 #include <format>
 #include <fstream>
+#include <unordered_map>
 
 #include "bitboard.h"
 #include "eval.h"
@@ -24,6 +25,7 @@ int main() {
 
 	book::book_open("/home/jayden/Desktop/Programs/potato-chess/potato-chess-uci/books/Book.bin");
 
+	std::unordered_map<std::string, int> options;
 	int totalHalfMoves = 0;
 
 	while (true) {
@@ -40,7 +42,7 @@ int main() {
 		if (token == "isready")
 			std::cout << "readyok\n";
 		else if (token == "uci")
-			std::cout << "id name Potato Chess\nid author Jayden Li\nuciok\n";
+			std::cout << "id name Potato Chess\nid author Jayden Li\noption name Move Overhead type spin default 10 min 0 max 5000\nuciok\n";
 		else if (token == "position") {
 			totalHalfMoves = 0;
 			ss >> token;
@@ -119,15 +121,37 @@ int main() {
 				else {
 					int remainingTime = bitboard::board.turn ? btime : wtime;
 					int inc = bitboard::board.turn ? binc : winc;
-					int baseTime = timeman::calc_base_time(remainingTime, totalHalfMoves / 2);
-					// std::cout << baseTime << "\n";
-					res = search::search(bitboard::board, baseTime + inc);
+					if (inc == -1)
+						inc = 0;
+
+					int time = timeman::calc_base_time(remainingTime, totalHalfMoves / 2) - options["Move Overhead"];
+					time = std::max(100, time);
+					res = search::search(bitboard::board, time + inc);
 				}
 				move = res.move;
 			}
 
 			std::cout << "bestmove ";
 			std::cout << move::to_string(move) << "\n";
+		}
+		else if (token == "setoption") {
+			std::string optionName;
+			int value;
+			while (ss >> token) {
+				if (token == "name") {
+					bool first = true;
+					while (ss >> token) {
+						if (token == "value")
+							break;
+						if (!first)
+							optionName += " ";
+						first = false;
+						optionName += token;
+					}
+				}
+				ss >> value;
+				options[optionName] = value;
+			} 
 		}
 		// polyglot (opening book system) key
 		else if (token == "pgkey")
