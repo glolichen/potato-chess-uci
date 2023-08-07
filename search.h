@@ -13,7 +13,7 @@ namespace search {
 		bool mate_found;
 	};
 
-	int minimax(const bitboard::Position &board, int depth, int alpha, int beta, int depth_from_start);
+	int pvs(const bitboard::Position &board, int depth, int alpha, int beta, int depth_from_start);
 
 	SearchResult search(bitboard::Position &board, int time_MS);
 

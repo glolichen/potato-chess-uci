@@ -126,7 +126,7 @@ int main() {
 
 					int time = timeman::calc_base_time(remainingTime, totalHalfMoves / 2) - options["Move Overhead"];
 					time = std::max(100, time);
-					res = search::search(bitboard::board, time + inc);
+					res = search::search(bitboard::board, time + (inc * 0.5));
 				}
 				move = res.move;
 			}
