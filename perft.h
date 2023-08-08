@@ -10,8 +10,8 @@ namespace perft {
 	};
 
 	PerftResult test(bitboard::Position &board, int depth);
-	void perftAtomicFirst(const bitboard::Position &board, int depth);
-	void perftAtomic(const bitboard::Position &board, int depth, int prevMove);
+	void perft_atomic_first(const bitboard::Position &board, int depth);
+	void perft_atomic(const bitboard::Position &board, int depth, int prevMove);
 	ull perft(const bitboard::Position &board, int depth);
 }
 

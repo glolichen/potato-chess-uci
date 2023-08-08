@@ -17,12 +17,12 @@ std::atomic<ull> answer;
 
 perft::PerftResult perft::test(bitboard::Position &board, int depth) {
 	ull start = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-	perft::perftAtomicFirst(bitboard::board, depth);
+	perft::perft_atomic_first(bitboard::board, depth);
 	ull end = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 	return { (ull) answer, (int) (end - start) == 0 ? 1 : (int) (end - start) };
 }
 
-void perft::perftAtomicFirst(const bitboard::Position &board, int depth) {
+void perft::perft_atomic_first(const bitboard::Position &board, int depth) {
 	answer = 0;
 
 	std::vector<int> moves;
@@ -39,14 +39,14 @@ void perft::perftAtomicFirst(const bitboard::Position &board, int depth) {
 		memcpy(&newBoard, &board, sizeof(board));
 		move::make_move(newBoard, move);
 
-		threads.push_back(std::thread(perft::perftAtomic, newBoard, depth - 1, move));
+		threads.push_back(std::thread(perft::perft_atomic, newBoard, depth - 1, move));
 	}
 
 	for (int i = 0; i < threads.size(); i++)
 		threads[i].join();
 }
 
-void perft::perftAtomic(const bitboard::Position &board, int depth, int prevMove) {
+void perft::perft_atomic(const bitboard::Position &board, int depth, int prevMove) {
 	std::vector<int> moves;
 	movegen::move_gen(board, moves);
 
