@@ -6,6 +6,8 @@
 #include <tuple>
 #include <queue>
 #include <vector>
+#include <future>
+#include <thread>
 
 #include "bitboard.h"
 #include "eval.h"
@@ -189,7 +191,7 @@ int search::pvs(const bitboard::Position &board, int depth, int alpha, int beta,
 			if (curEval == SEARCH_EXPIRED)
 				return SEARCH_EXPIRED;
 			curEval *= -1;
-			if (alpha < curEval && curEval < beta) {
+			if (curEval > alpha) {
 				curEval = search::pvs(newBoard, depth - 1, -beta, -curEval, depthFromStart + 1);
 				if (curEval == SEARCH_EXPIRED)
 					return SEARCH_EXPIRED;
