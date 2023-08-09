@@ -18,27 +18,24 @@
 #include "timeman.h"
 
 int main() {
-	// srand(time(0));
+	srand(time(0));
 
-	// maps::init();
-	// hash::init();
+	maps::init();
+	hash::init();
 
-	// bitboard::decode("2k5/8/3K4/8/6p1/7B/5P2/8 w - - 0 1");
-	// move::make_move(bitboard::board, 42624);
+	// bitboard::decode("8/8/8/8/nk1p1RB1/8/4P3/K7 w - - 0 1");
+	// move::make_move(bitboard::board, 46784);
+	// // bitboard::decode("8/2p5/8/1P1p3r/KR3p1k/8/4P1P1/8 w - - 0 2");
+	// // move::make_move(bitboard::board, 38464);
 	// bitboard::print_board(bitboard::board);
 
 	// std::vector<int> moves;
 	// movegen::move_gen(bitboard::board, moves);
 	// for (int move : moves)
 	// 	std::cout << move::to_string(move) << ", ";
+	// std::cout << moves.size();
 
 	// return 0;
-
-
-
-
-
-
 
 	book::book_open("/home/jayden/Desktop/Programs/potato-chess/potato-chess-uci/books/Book.bin");
 

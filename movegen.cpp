@@ -316,21 +316,21 @@ void movegen::move_gen(const bitboard::Position &board, std::vector<int> &moves)
 		int center = board.enPassant + (dir * 8);
 		int ownPawn = PAWN + (board.turn ? 6 : 0);
 
-		if (center % 8 > 0 && board.mailbox[center - 1] == ownPawn) {
-			bool ok = true;
-			if (QUERY(pinned, center - 1)) {
-				if ((kingPos - (center - 1)) % 8 == 0)
-					ok = false;
-				else if ((kingPos - (center - 1)) % (board.enPassant - (center - 1)) != 0)
-					ok = false;
-			}
-			else {
-				ull left = board.allPieces & (maps::rook[center - 1][3] ^ (1 << center));
-				ull right = board.allPieces & (maps::rook[center][1] ^ (1 << (center - 1)));
-				int leftPiece = __builtin_ctzll(left);
-				int rightPiece = __builtin_ctzll(right);
-
-				if (left == 1ull << leftPiece && right == 1ull << rightPiece) {
+		if (!checks || checks == (1ull << (center))) {
+			if (center % 8 > 0 && board.mailbox[center - 1] == ownPawn) {
+				bool ok = true;
+				if (QUERY(pinned, center - 1)) {
+					if ((kingPos - (center - 1)) % 8 == 0)
+						ok = false;
+					else if ((kingPos - (center - 1)) % (board.enPassant - (center - 1)) != 0)
+						ok = false;
+				}
+				else {
+					ull left = board.allPieces & maps::rook[center][3];
+					ull right = board.allPieces & maps::rook[center - 1][1];
+					int leftPiece = __builtin_ctzll(left);
+					int rightPiece = 63 - __builtin_clzll(right);
+					
 					int oppRook = ROOK + (board.turn ? 0 : 6);
 					int oppQueen = QUEEN + (board.turn ? 0 : 6);
 					if (leftPiece == kingPos && (board.mailbox[rightPiece] == oppRook || board.mailbox[rightPiece] == oppQueen))
@@ -338,25 +338,23 @@ void movegen::move_gen(const bitboard::Position &board, std::vector<int> &moves)
 					else if (rightPiece == kingPos && (board.mailbox[leftPiece] == oppRook || board.mailbox[leftPiece] == oppQueen))
 						ok = false;
 				}
+				if (ok)
+					moves.push_back(NEW_MOVE(center - 1, board.enPassant, 0, 0, 1));
 			}
-			if (ok)
-				moves.push_back(NEW_MOVE(center - 1, board.enPassant, 0, 0, 1));
-		}
-		if (center % 8 < 7 && board.mailbox[center + 1] == ownPawn) {
-			bool ok = true;
-			if (QUERY(pinned, center + 1)) {
-				if ((kingPos - (center + 1)) % 8 == 0)
-					ok = false;
-				else if ((kingPos - (center + 1)) % (board.enPassant - (center + 1)) != 0)
-					ok = false;
-			}
-			else {
-				ull left = board.allPieces & (maps::rook[center + 1][3] ^ (1 << (center + 2)));
-				ull right = board.allPieces & (maps::rook[center][1] ^ (1 << (center - 1)));
-				int leftPiece = __builtin_ctzll(left);
-				int rightPiece = __builtin_ctzll(right);
-
-				if (left == 1ull << leftPiece && right == 1ull << rightPiece) {
+			if (center % 8 < 7 && board.mailbox[center + 1] == ownPawn) {
+				bool ok = true;
+				if (QUERY(pinned, center + 1)) {
+					if ((kingPos - (center + 1)) % 8 == 0)
+						ok = false;
+					else if ((kingPos - (center + 1)) % (board.enPassant - (center + 1)) != 0)
+						ok = false;
+				}
+				else {
+					ull left = board.allPieces & maps::rook[center + 1][3];
+					ull right = board.allPieces & maps::rook[center][1];
+					int leftPiece = __builtin_ctzll(left);
+					int rightPiece = 63 - __builtin_clzll(right);
+					
 					int oppRook = ROOK + (board.turn ? 0 : 6);
 					int oppQueen = QUEEN + (board.turn ? 0 : 6);
 					if (leftPiece == kingPos && (board.mailbox[rightPiece] == oppRook || board.mailbox[rightPiece] == oppQueen))
@@ -364,9 +362,9 @@ void movegen::move_gen(const bitboard::Position &board, std::vector<int> &moves)
 					else if (rightPiece == kingPos && (board.mailbox[leftPiece] == oppRook || board.mailbox[leftPiece] == oppQueen))
 						ok = false;
 				}
+				if (ok)
+					moves.push_back(NEW_MOVE(center + 1, board.enPassant, 0, 0, 1));
 			}
-			if (ok)
-				moves.push_back(NEW_MOVE(center + 1, board.enPassant, 0, 0, 1));
 		}
 
 		// if (board.mailbox[center - 1] == pawn && center % 8 > 0) {

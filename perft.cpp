@@ -6,6 +6,7 @@
 #include <atomic>
 #include <future>
 #include <thread>
+#include <sstream>
 
 #include "bitboard.h"
 #include "maps.h"
@@ -29,8 +30,10 @@ void perft::perft_atomic_first(const bitboard::Position &board, int depth) {
 	movegen::move_gen(board, moves);
 
 	if (depth == 1) {
+		std::stringstream ss;
 		for (int move : moves)
-			std::cout << move::to_string(move) << ": 1\n";
+			ss << move::to_string(move) << ": 1\n";
+		std::cout << ss.str();
 		answer += moves.size();
 		return;
 	}
@@ -53,7 +56,9 @@ void perft::perft_atomic(const bitboard::Position &board, int depth, int prevMov
 	movegen::move_gen(board, moves);
 
 	if (depth == 1) {
-		std::cout << move::to_string(prevMove) << ": " << moves.size() << "\n";
+		std::stringstream ss;
+		ss << move::to_string(prevMove) << ": " << moves.size() << "\n";
+		std::cout << ss.str();
 		answer += moves.size();
 		return;
 	}
@@ -66,7 +71,9 @@ void perft::perft_atomic(const bitboard::Position &board, int depth, int prevMov
 		positions += perft::perft(newBoard, depth - 1);
 	}
 
-	std::cout << move::to_string(prevMove) << ": " << positions << "\n";
+	std::stringstream ss;
+	ss << move::to_string(prevMove) << ": " << positions << "\n";
+	std::cout << ss.str();
 	answer += positions;
 }
 
