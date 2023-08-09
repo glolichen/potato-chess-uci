@@ -90,7 +90,7 @@ int main() {
 					int depth;
 					ss >> depth;
 					perft::PerftResult result = perft::test(bitboard::board, depth);
-					std::cout << "\ntotal nodes: " << result.totalNodes << "\n";
+					std::cout << "total nodes: " << result.totalNodes << "\n";
 					std::cout << "time: " << result.time << "ms\n";
 					std::cout << "nodes per second: " << (result.totalNodes / result.time * 1000) << "\n";
 					goto skip;

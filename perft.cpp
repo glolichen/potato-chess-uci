@@ -29,6 +29,8 @@ void perft::perft_atomic_first(const bitboard::Position &board, int depth) {
 	movegen::move_gen(board, moves);
 
 	if (depth == 1) {
+		for (int move : moves)
+			std::cout << move::to_string(move) << ": 1\n";
 		answer += moves.size();
 		return;
 	}
@@ -51,6 +53,7 @@ void perft::perft_atomic(const bitboard::Position &board, int depth, int prevMov
 	movegen::move_gen(board, moves);
 
 	if (depth == 1) {
+		std::cout << move::to_string(prevMove) << ": " << moves.size() << "\n";
 		answer += moves.size();
 		return;
 	}
