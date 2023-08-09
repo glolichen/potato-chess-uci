@@ -4,7 +4,7 @@
 #include "maps.h"
 
 ull maps::knight[64];
-ull maps::rook[64][4]; // 0 = north, 1 = east, 2 = south, 3 = east, 4 = all
+ull maps::rook[64][4]; // 0 = north, 1 = east, 2 = south, 3 = west, 4 = all
 ull maps::bishop[64][4]; // 0 = northeast, 1 = southeast, 2 = southwest, 3 = northwest, 4 = all
 ull maps::fill[64][64];
 std::unordered_map<int, ull> maps::pinnedOffsets[6][64];

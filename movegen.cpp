@@ -314,29 +314,80 @@ void movegen::move_gen(const bitboard::Position &board, std::vector<int> &moves)
 	if (board.enPassant != -1) {
 		int dir = board.turn ? 1 : -1;
 		int center = board.enPassant + (dir * 8);
+		int ownPawn = PAWN + (board.turn ? 6 : 0);
 
-		int pawn = PAWN + (board.turn ? 6 : 0);
+		if (center % 8 > 0 && board.mailbox[center - 1] == ownPawn) {
+			bool ok = true;
+			if (QUERY(pinned, center - 1)) {
+				if ((kingPos - (center - 1)) % 8 == 0)
+					ok = false;
+				else if ((kingPos - (center - 1)) % (board.enPassant - (center - 1)) != 0)
+					ok = false;
+			}
+			else {
+				ull left = board.allPieces & (maps::rook[center - 1][3] ^ (1 << center));
+				ull right = board.allPieces & (maps::rook[center][1] ^ (1 << (center - 1)));
+				int leftPiece = __builtin_ctzll(left);
+				int rightPiece = __builtin_ctzll(right);
 
-		if (board.mailbox[center - 1] == pawn && center % 8 > 0) {
-			int move = NEW_MOVE(center - 1, board.enPassant, 0, 0, 1);
-
-			bitboard::Position newBoard;
-			memcpy(&newBoard, &board, sizeof(board));
-
-			move::make_move(newBoard, move);
-			if (!get_checks(newBoard, !newBoard.turn))
-				moves.push_back(move);
+				if (left == 1ull << leftPiece && right == 1ull << rightPiece) {
+					int oppRook = ROOK + (board.turn ? 0 : 6);
+					int oppQueen = QUEEN + (board.turn ? 0 : 6);
+					if (leftPiece == kingPos && (board.mailbox[rightPiece] == oppRook || board.mailbox[rightPiece] == oppQueen))
+						ok = false;
+					else if (rightPiece == kingPos && (board.mailbox[leftPiece] == oppRook || board.mailbox[leftPiece] == oppQueen))
+						ok = false;
+				}
+			}
+			if (ok)
+				moves.push_back(NEW_MOVE(center - 1, board.enPassant, 0, 0, 1));
 		}
-		if (board.mailbox[center + 1] == pawn && center % 8 < 7) {
-			int move = NEW_MOVE(center + 1, board.enPassant, 0, 0, 1);
+		if (center % 8 < 7 && board.mailbox[center + 1] == ownPawn) {
+			bool ok = true;
+			if (QUERY(pinned, center + 1)) {
+				if ((kingPos - (center + 1)) % 8 == 0)
+					ok = false;
+				else if ((kingPos - (center + 1)) % (board.enPassant - (center + 1)) != 0)
+					ok = false;
+			}
+			else {
+				ull left = board.allPieces & (maps::rook[center + 1][3] ^ (1 << (center + 2)));
+				ull right = board.allPieces & (maps::rook[center][1] ^ (1 << (center - 1)));
+				int leftPiece = __builtin_ctzll(left);
+				int rightPiece = __builtin_ctzll(right);
 
-			bitboard::Position new_board;
-			memcpy(&new_board, &board, sizeof(board));
-
-			move::make_move(new_board, move);
-			if (!get_checks(new_board, !new_board.turn))
-				moves.push_back(move);
+				if (left == 1ull << leftPiece && right == 1ull << rightPiece) {
+					int oppRook = ROOK + (board.turn ? 0 : 6);
+					int oppQueen = QUEEN + (board.turn ? 0 : 6);
+					if (leftPiece == kingPos && (board.mailbox[rightPiece] == oppRook || board.mailbox[rightPiece] == oppQueen))
+						ok = false;
+					else if (rightPiece == kingPos && (board.mailbox[leftPiece] == oppRook || board.mailbox[leftPiece] == oppQueen))
+						ok = false;
+				}
+			}
+			if (ok)
+				moves.push_back(NEW_MOVE(center + 1, board.enPassant, 0, 0, 1));
 		}
+
+		// if (board.mailbox[center - 1] == pawn && center % 8 > 0) {
+		// 	int move = NEW_MOVE(center - 1, board.enPassant, 0, 0, 1);
+
+		// 	bitboard::Position newBoard;
+		// 	memcpy(&newBoard, &board, sizeof(board));
+
+		// 	move::make_move(newBoard, move);
+		// 	if (!get_checks(newBoard, !newBoard.turn))
+		// 		moves.push_back(move);
+		// }
+		// if (board.mailbox[center + 1] == pawn && center % 8 < 7) {
+		// 	int move = NEW_MOVE(center + 1, board.enPassant, 0, 0, 1);
+
+		// 	bitboard::Position new_board;
+		// 	memcpy(&new_board, &board, sizeof(board));
+
+		// 	move::make_move(new_board, move);
+		// 	if (!get_checks(new_board, !new_board.turn))
+		// 		moves.push_back(move);
 	}
 
 	if (checks) {
