@@ -308,7 +308,7 @@ void movegen::move_gen(const bitboard::Position &board, std::vector<int> &moves)
 	ull attacked = getAttacked(board, board.turn);
 	ull checks = get_checks(board, board.turn);
 	ull pinned = getPinned(board, board.turn);
-	ull pieces, blocks;
+	ull pieces, blocks, kingCannotMoveTo;
 
 	int kingPos = __builtin_ctzll(board.pieces[board.turn][KING]);
 	if (board.enPassant != -1) {
@@ -410,10 +410,14 @@ void movegen::move_gen(const bitboard::Position &board, std::vector<int> &moves)
 			ull filled = (1ull << checkerPos) | (1ull << kingPos);
 			filled = maps::fill[__builtin_ctzll(filled)][63 - __builtin_clzll(filled)];
 
-			if (maps::pinnedOffsets[piece][kingPos].count(kingPos - checkerPos))
-				blocks = maps::pinnedOffsets[piece][kingPos].at(kingPos - checkerPos) & filled & ~board.pieces[board.turn][KING];
-			else
-				blocks = 1ull << checkerPos;
+			if (kingPos / 8 == checkerPos / 8)
+				blocks = filled;
+			else {
+				if (maps::pinnedOffsets[piece][kingPos].count(kingPos - checkerPos))
+					blocks = maps::pinnedOffsets[piece][kingPos].at(kingPos - checkerPos) & filled & ~board.pieces[board.turn][KING];
+				else
+					blocks = 1ull << checkerPos;
+			}
 		}
 	}
 	else

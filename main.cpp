@@ -23,8 +23,8 @@ int main() {
 	maps::init();
 	hash::init();
 
-	// bitboard::decode("8/8/8/8/nk1p1RB1/8/4P3/K7 w - - 0 1");
-	// move::make_move(bitboard::board, 46784);
+	// bitboard::decode("r3k2r/Pppp1ppp/1b3nbN/nPP5/BB2P3/q4N2/Pp1P2PP/R2Q1RK1 b kq - 0 1");
+	// // move::make_move(bitboard::board, 46784);
 	// // bitboard::decode("8/2p5/8/1P1p3r/KR3p1k/8/4P1P1/8 w - - 0 2");
 	// // move::make_move(bitboard::board, 38464);
 	// bitboard::print_board(bitboard::board);
