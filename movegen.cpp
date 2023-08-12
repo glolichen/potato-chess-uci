@@ -578,16 +578,13 @@ void movegen::move_gen(const bitboard::Position &board, std::vector<int> &moves)
 }
 
 const int pieceValue[6] = { 100, 320, 340, 500, 900, 0 };
-bool sort_move_order(std::pair<int, int> o1, std::pair<int, int> o2) {
-    return o1.second > o2.second;
-}
 void movegen::move_gen_with_ordering(const bitboard::Position &board, std::vector<int> &moves) {
-    std::vector<int> unorderedMoves;
-    movegen::move_gen(board, unorderedMoves);
+	std::vector<int> unorderedMoves;
+	movegen::move_gen(board, unorderedMoves);
 
-    std::vector<std::pair<int, int>> score;
-    for (const int &move : unorderedMoves) {
-        int estimatedScore = 0;
+	std::vector<std::pair<int, int>> score;
+	for (const int &move : unorderedMoves) {
+		int estimatedScore = 0;
 
 		int source = SOURCE(move);
 		int dest = DEST(move);
@@ -596,24 +593,26 @@ void movegen::move_gen_with_ordering(const bitboard::Position &board, std::vecto
 		if (capture >= 6)
 			capture -= 6;
 
-        if (capture != -1) {
+		if (capture != -1) {
 			int moved = board.mailbox[source];
 			if (moved >= 6)
 				moved -= 6;
 			
-            int movedPiece = pieceValue[moved];
-            int capturedPiece = pieceValue[capture];
+			int movedPiece = pieceValue[moved];
+			int capturedPiece = pieceValue[capture];
 
-            estimatedScore = std::max(capturedPiece - movedPiece, 1) * capturedPiece;
-        }
-        if (promote)
-            estimatedScore += 1000;
+			estimatedScore = std::max(capturedPiece - movedPiece, 1) * capturedPiece;
+		}
+		if (promote)
+			estimatedScore += 1000;
 
-        score.push_back({move, estimatedScore});
-    }
+		score.push_back({ move, estimatedScore });
+	}
 
-    std::sort(score.begin(), score.end(), sort_move_order);
+	std::sort(score.begin(), score.end(), [](std::pair<int, int> o1, std::pair<int, int> o2) {
+		return o1.second > o2.second;
+	});
 
-    for (const std::pair<int, int> &move : score)
-        moves.push_back(move.first);
+	for (const std::pair<int, int> &move : score)
+		moves.push_back(move.first);
 }
