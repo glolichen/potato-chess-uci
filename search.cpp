@@ -118,10 +118,12 @@ int quiescence(const bitboard::Position &board, int alpha, int beta, int depth) 
 	return alpha;
 }
 
-int search::pvs(const bitboard::Position &board, int depth, int alpha, int beta, int depthFromStart) {
-	nodes++;
-	if (nodes & (NODES_PER_TIME_CHECK - 1) == (NODES_PER_TIME_CHECK - 1) && is_time_up())
-		return SEARCH_EXPIRED;
+void search::pvs(int &result, const bitboard::Position &board, int depth, int alpha, int beta, int depthFromStart) {
+	// nodes++;
+	// if (nodes & (NODES_PER_TIME_CHECK - 1) == (NODES_PER_TIME_CHECK - 1) && is_time_up()) {
+	// 	result = SEARCH_EXPIRED;
+	// 	return;
+	// }
 
 	std::vector<int> moves;
 	movegen::move_gen_with_ordering(board, moves);
@@ -137,116 +139,133 @@ int search::pvs(const bitboard::Position &board, int depth, int alpha, int beta,
 	}
 
 	if (moves.size() == 0) {
-		if (movegen::get_checks(board, board.turn))
-			return INT_MIN + depthFromStart + 1; // checkmate
-		return 0;
+		result = movegen::get_checks(board, board.turn) ? INT_MIN + depthFromStart + 1 : 0;
+		return;
 	}
 
 	if (depth == 0) {		
-		int qsResult = quiescence(board, INT_MIN, INT_MAX, QUISCENCE_DEPTH);
-		if (qsResult == SEARCH_EXPIRED)
-			return SEARCH_EXPIRED;
-		return qsResult;
+		result = quiescence(board, INT_MIN, INT_MAX, QUISCENCE_DEPTH);
+		return;
 
 		// return eval::evaluate(board) * (board.turn ? -1 : 1);
 	}
 
-	if (board.fiftyMoveClock >= 50)
-		return 0;
-
-	hashdefs::ZobristTuple hashes = hash::hash(board);
-	if (transposition.count(hashes)) {
-		TTResult prev = transposition.at(hashes);
-		if (prev.depth > depth)
-			return prev.eval * (board.turn ? -1 : 1);
-		for (int i = 0; i < moves.size(); i++) {
-			if (moves[i] == prev.move) {
-				moves.erase(moves.begin() + i);
-				moves.insert(moves.begin(), prev.move);
-				break;
-			}
-		}
+	if (board.fiftyMoveClock >= 50) {
+		result = 0;
+		return;
 	}
+
+	// hashdefs::ZobristTuple hashes = hash::hash(board);
+	// if (transposition.count(hashes)) {
+	// 	TTResult prev = transposition.at(hashes);
+	// 	if (prev.depth > depth)
+	// 		return prev.eval * (board.turn ? -1 : 1);
+	// 	for (int i = 0; i < moves.size(); i++) {
+	// 		if (moves[i] == prev.move) {
+	// 			moves.erase(moves.begin() + i);
+	// 			moves.insert(moves.begin(), prev.move);
+	// 			break;
+	// 		}
+	// 	}
+	// }
+
+	int *data = new int[moves.size()];
+	std::vector<std::thread> threads;
 
 	bool isFirst = true;
 	int topMove, score = INT_MIN;
-	for (const int &move : moves) {
+	for (int i = 0; i < moves.size(); i++) {
 		bitboard::Position newBoard;
 		memcpy(&newBoard, &board, sizeof(board));
-		if (board.mailbox[DEST(move)] != -1 || board.mailbox[SOURCE(move)] == PAWN || board.mailbox[SOURCE(move)] == PAWN + 6)
+		if (board.mailbox[DEST(moves[i])] != -1 || board.mailbox[SOURCE(moves[i])] == PAWN || board.mailbox[SOURCE(moves[i])] == PAWN + 6)
 			newBoard.fiftyMoveClock = 0;
 		else
 			newBoard.fiftyMoveClock++;
-		move::make_move(newBoard, move);
+		move::make_move(newBoard, moves[i]);
 		
 		int curEval;
 		if (isFirst) {
-			curEval = search::pvs(newBoard, depth - 1, -beta, -alpha, depthFromStart + 1);
-			if (curEval == SEARCH_EXPIRED)
-				return SEARCH_EXPIRED;
+			search::pvs(curEval, newBoard, depth - 1, -beta, -alpha, depthFromStart + 1);
+			if (curEval == SEARCH_EXPIRED) {
+				result = SEARCH_EXPIRED;
+				goto end;
+			}
 			curEval *= -1;
 		}
 		else {
-			curEval = search::pvs(newBoard, depth - 1, -alpha - 1, -alpha, depthFromStart + 1);
-			if (curEval == SEARCH_EXPIRED)
-				return SEARCH_EXPIRED;
-			curEval *= -1;
-			if (curEval > alpha) {
-				curEval = search::pvs(newBoard, depth - 1, -beta, -curEval, depthFromStart + 1);
-				if (curEval == SEARCH_EXPIRED)
-					return SEARCH_EXPIRED;
-				curEval *= -1;
-			}
+			threads.push_back(std::thread(search::pvs, std::ref(data[i]), newBoard, depth - 1, -alpha - 1, -alpha, depthFromStart + 1));
+			continue;
+			// if (curEval == SEARCH_EXPIRED) {
+			// 	result = SEARCH_EXPIRED;
+			// 	goto end;
+			// }
+			// curEval *= -1;
+			// if (curEval > alpha) {
+			// 	search::pvs(curEval, newBoard, depth - 1, -beta, -curEval, depthFromStart + 1);
+			// 	if (curEval == SEARCH_EXPIRED) {
+			// 		result = SEARCH_EXPIRED;
+			// 		goto end;
+			// 	}
+			// 	curEval *= -1;
+			// }
 		}
 
 		isFirst = false;
+		alpha = curEval;
+		topMove = moves[i];
 
-		if (curEval > alpha) {
-			alpha = curEval;
-			topMove = move;
+		// if (curEval > alpha) {
+		// 	alpha = curEval;
+		// 	topMove = moves[i];
+		// }
+		// if (alpha >= beta)
+		// 	break;
+	}
+
+	for (int i = 0; i < threads.size(); i++)
+		threads[i].join();
+
+	for (int i = 1; i < moves.size(); i++) {
+		threads[i - 1].detach();
+		if (data[i] == SEARCH_EXPIRED) {
+			result = SEARCH_EXPIRED;
+			goto end;
+		}
+
+		data[i] *= -1;
+		// if (data[i] > alpha) {
+		// 	search::pvs(curEval, newBoard, depth - 1, -beta, -curEval, depthFromStart + 1);
+		// 	if (curEval == SEARCH_EXPIRED) {
+		// 		result = SEARCH_EXPIRED;
+		// 		goto end;
+		// 	}
+		// 	curEval *= -1;
+		// }
+
+		if (data[i] > alpha) {
+			alpha = data[i];
+			topMove = moves[i];
 		}
 		if (alpha >= beta)
 			break;
-
-		// int cur_eval = search::minimax(new_board, depth - 1, alpha, beta, depth_from_start + 1);
-		// if (cur_eval == SEARCH_EXPIRED)
-		// 	return SEARCH_EXPIRED;
-
-		// if (!board.turn) { // white
-		// 	if (cur_eval > score) {
-		// 		score = cur_eval;
-		// 		topMove = move;
-		// 	}
-
-		// 	if (score >= beta)
-		// 		break;
-		// 	alpha = std::max(score, alpha);
-		// }
-		// else { // black
-		// 	if (cur_eval < score) {
-		// 		score = cur_eval;
-		// 		topMove = move;
-		// 	}
-
-		// 	if (score <= alpha)
-		// 		break;
-		// 	beta = std::min(score, beta);
-		// }
 	}
 
-	int scoreMinimax = score * (board.turn ? -1 : 1);
-	if (transposition.count(hashes) == 0)
-		table_insert(hashes, { scoreMinimax, topMove, depth });
-	else {
-		TTResult prev = transposition.at(hashes);
-		if (depth > prev.depth)
-			transposition[hashes] = { scoreMinimax, topMove, depth };
-	}
+	// int scoreMinimax = score * (board.turn ? -1 : 1);
+	// if (transposition.count(hashes) == 0)
+	// 	table_insert(hashes, { scoreMinimax, topMove, depth });
+	// else {
+	// 	TTResult prev = transposition.at(hashes);
+	// 	if (depth > prev.depth)
+	// 		transposition[hashes] = { scoreMinimax, topMove, depth };
+	// }
 
 	if (depthFromStart == 0)
 		bestMove = topMove;
 
-	return alpha;
+	result = alpha;
+
+	end:
+	delete[] data;
 }
 
 search::SearchResult search::search(bitboard::Position &board, int timeMS) {
@@ -284,9 +303,10 @@ search::SearchResult search::search(bitboard::Position &board, int timeMS) {
 		depth = searchDepth;
 	bool is_mate = false;
 
+	int eval;
 	while (true) {
 		nodes = 0;
-		int eval = search::pvs(board, depth, INT_MIN + 2, INT_MAX - 2, 0);
+		search::pvs(eval, board, depth, INT_MIN + 2, INT_MAX - 2, 0);
 		topMoveNull = false;
 
 		if (eval == SEARCH_EXPIRED) {
