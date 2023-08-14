@@ -12,7 +12,7 @@ UCI compatible chess engine. Also available as a [lichess bot](https://lichess.o
 
 ## Acknowledgements
  * The [lichess bot developers](https://github.com/lichess-bot-devs), for their project [lichess-bot](https://github.com/lichess-bot-devs/lichess-bot) that made the lichess bot possible
- * Fabien Letouzey and his Fruit engine, whose Polyglot probing code is used in this program
+ * Fabien Letouzey and his [Fruit engine](https://arctrix.com/nas/chess/fruit/), whose Polyglot probing code is used in this program
    * The program is licensed under GPL-v2 to comply with Fruit 2.1's license
  * The [Leela Chess Zero developers](https://github.com/LeelaChessZero/) for providing the [time usage curve](https://lczero.org/blog/2018/09/time-management/) that is also used in this program
  * H. G. Muller for [documenting](http://hgm.nubati.net/book_format.html) how Polyglot hashing works
