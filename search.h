@@ -13,7 +13,7 @@ namespace search {
 		bool mate_found;
 	};
 
-	void pvs(int &result, const bitboard::Position &board, int depth, int alpha, int beta, int depth_from_start);
+	void pvs(int &result, const bitboard::Position &board, int depth, int alpha, int beta, int depth_from_start, bool useThreads);
 
 	SearchResult search(bitboard::Position &board, int time_MS);
 

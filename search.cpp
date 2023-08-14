@@ -16,6 +16,8 @@
 #include "movegen.h"
 #include "search.h"
 
+#include "ctpl_stl.h"
+
 /*
 add soon:
  * transposition table on quiscence
@@ -27,12 +29,15 @@ add soon:
 #define QUISCENCE_DEPTH 5
 #define TT_SIZE_MB 512
 #define NODES_PER_TIME_CHECK 8192
+#define THREAD_COUNT 8
 
 const int SEARCH_EXPIRED = INT_MIN + 500;
 
 struct TTResult {
 	int eval, move, depth;
 };
+
+ctpl::thread_pool tp(THREAD_COUNT);
 
 bool topMoveNull;
 int bestMove, secondBestMove;
@@ -118,12 +123,12 @@ int quiescence(const bitboard::Position &board, int alpha, int beta, int depth) 
 	return alpha;
 }
 
-void search::pvs(int &result, const bitboard::Position &board, int depth, int alpha, int beta, int depthFromStart) {
-	// nodes++;
-	// if (nodes & (NODES_PER_TIME_CHECK - 1) == (NODES_PER_TIME_CHECK - 1) && is_time_up()) {
-	// 	result = SEARCH_EXPIRED;
-	// 	return;
-	// }
+void search::pvs(int &result, const bitboard::Position &board, int depth, int alpha, int beta, int depthFromStart, bool useThreads) {
+	nodes++;
+	if (nodes & (NODES_PER_TIME_CHECK - 1) == (NODES_PER_TIME_CHECK - 1) && is_time_up()) {
+		result = SEARCH_EXPIRED;
+		return;
+	}
 
 	std::vector<int> moves;
 	movegen::move_gen_with_ordering(board, moves);
@@ -145,9 +150,8 @@ void search::pvs(int &result, const bitboard::Position &board, int depth, int al
 
 	if (depth == 0) {		
 		result = quiescence(board, INT_MIN, INT_MAX, QUISCENCE_DEPTH);
+		// result = eval::evaluate(board) * (board.turn ? -1 : 1);
 		return;
-
-		// return eval::evaluate(board) * (board.turn ? -1 : 1);
 	}
 
 	if (board.fiftyMoveClock >= 50) {
@@ -169,10 +173,11 @@ void search::pvs(int &result, const bitboard::Position &board, int depth, int al
 	// 	}
 	// }
 
-	int *data = new int[moves.size()];
-	std::vector<std::thread> threads;
+	int *data;
+	std::vector<std::future<void>> results;
+	if (useThreads)
+		data = new int[moves.size()];
 
-	bool isFirst = true;
 	int topMove, score = INT_MIN;
 	for (int i = 0; i < moves.size(); i++) {
 		bitboard::Position newBoard;
@@ -184,8 +189,8 @@ void search::pvs(int &result, const bitboard::Position &board, int depth, int al
 		move::make_move(newBoard, moves[i]);
 		
 		int curEval;
-		if (isFirst) {
-			search::pvs(curEval, newBoard, depth - 1, -beta, -alpha, depthFromStart + 1);
+		if (i == 0) {
+			search::pvs(curEval, newBoard, depth - 1, -beta, -alpha, depthFromStart + 1, useThreads);
 			if (curEval == SEARCH_EXPIRED) {
 				result = SEARCH_EXPIRED;
 				goto end;
@@ -193,61 +198,59 @@ void search::pvs(int &result, const bitboard::Position &board, int depth, int al
 			curEval *= -1;
 		}
 		else {
-			threads.push_back(std::thread(search::pvs, std::ref(data[i]), newBoard, depth - 1, -alpha - 1, -alpha, depthFromStart + 1));
-			continue;
-			// if (curEval == SEARCH_EXPIRED) {
-			// 	result = SEARCH_EXPIRED;
-			// 	goto end;
-			// }
-			// curEval *= -1;
-			// if (curEval > alpha) {
-			// 	search::pvs(curEval, newBoard, depth - 1, -beta, -curEval, depthFromStart + 1);
-			// 	if (curEval == SEARCH_EXPIRED) {
-			// 		result = SEARCH_EXPIRED;
-			// 		goto end;
-			// 	}
-			// 	curEval *= -1;
-			// }
+			if (useThreads) {
+				results.push_back(tp.push([&data, i, newBoard, depth, alpha, beta, depthFromStart](int) {
+					search::pvs(data[i], newBoard, depth - 1, -alpha - 1, -alpha, depthFromStart + 1, false);
+					data[i] *= -1;
+					if (data[i] > alpha) {
+						search::pvs(data[i], newBoard, depth - 1, -beta, -data[i], depthFromStart + 1, false);
+						data[i] *= -1;
+					}
+				}));
+				continue;
+			}
+			else {
+				search::pvs(curEval, newBoard, depth - 1, -alpha - 1, -alpha, depthFromStart + 1, false);
+				if (curEval == SEARCH_EXPIRED) {
+					result = SEARCH_EXPIRED;
+					return;
+				}
+				curEval *= -1;
+				if (curEval > alpha) {
+					search::pvs(curEval, newBoard, depth - 1, -beta, -curEval, depthFromStart + 1, false);
+					if (curEval == SEARCH_EXPIRED) {
+						result = SEARCH_EXPIRED;
+						return;
+					}
+					curEval *= -1;
+				}
+			}
 		}
 
-		isFirst = false;
-		alpha = curEval;
-		topMove = moves[i];
-
-		// if (curEval > alpha) {
-		// 	alpha = curEval;
-		// 	topMove = moves[i];
-		// }
-		// if (alpha >= beta)
-		// 	break;
-	}
-
-	for (int i = 0; i < threads.size(); i++)
-		threads[i].join();
-
-	for (int i = 1; i < moves.size(); i++) {
-		threads[i - 1].detach();
-		if (data[i] == SEARCH_EXPIRED) {
-			result = SEARCH_EXPIRED;
-			goto end;
-		}
-
-		data[i] *= -1;
-		// if (data[i] > alpha) {
-		// 	search::pvs(curEval, newBoard, depth - 1, -beta, -curEval, depthFromStart + 1);
-		// 	if (curEval == SEARCH_EXPIRED) {
-		// 		result = SEARCH_EXPIRED;
-		// 		goto end;
-		// 	}
-		// 	curEval *= -1;
-		// }
-
-		if (data[i] > alpha) {
-			alpha = data[i];
+		if (curEval > alpha) {
+			alpha = curEval;
 			topMove = moves[i];
 		}
 		if (alpha >= beta)
 			break;
+	}
+
+	if (useThreads) {
+		for (int i = 0; i < results.size(); i++)
+			results[i].get();
+		for (int i = 1; i < moves.size(); i++) {
+			if (data[i] == -SEARCH_EXPIRED) {
+				result = SEARCH_EXPIRED;
+				goto end;
+			}
+
+			if (data[i] > alpha) {
+				alpha = data[i];
+				topMove = moves[i];
+			}
+			if (alpha >= beta)
+				break;
+		}
 	}
 
 	// int scoreMinimax = score * (board.turn ? -1 : 1);
@@ -263,9 +266,10 @@ void search::pvs(int &result, const bitboard::Position &board, int depth, int al
 		bestMove = topMove;
 
 	result = alpha;
-
+	
 	end:
-	delete[] data;
+	if (useThreads)
+		delete[] data;
 }
 
 search::SearchResult search::search(bitboard::Position &board, int timeMS) {
@@ -306,7 +310,7 @@ search::SearchResult search::search(bitboard::Position &board, int timeMS) {
 	int eval;
 	while (true) {
 		nodes = 0;
-		search::pvs(eval, board, depth, INT_MIN + 2, INT_MAX - 2, 0);
+		search::pvs(eval, board, depth, INT_MIN + 2, INT_MAX - 2, 0, true);
 		topMoveNull = false;
 
 		if (eval == SEARCH_EXPIRED) {

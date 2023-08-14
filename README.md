@@ -18,4 +18,5 @@ UCI compatible chess engine. Also available as a [lichess bot](https://lichess.o
  * H. G. Muller for [documenting](http://hgm.nubati.net/book_format.html) how Polyglot hashing works
    * The algorithm he described is used in this program
  * [The Chess Programming Wiki](https://chessprogramming.org/) whose documentation has helped greatly in the development of this program
- * [Ronald Friederich's RofChade engine](https://www.chessprogramming.org/RofChade) for providing the piece location values used in the evaluation function 
+ * [Ronald Friederich's RofChade engine](https://www.chessprogramming.org/RofChade) for providing the piece location values used in the evaluation function
+ * [vit-vit](https://github.com/vit-vit)'s [CTPL library](https://github.com/vit-vit/CTPL), which powers this program's multithreaded search function
