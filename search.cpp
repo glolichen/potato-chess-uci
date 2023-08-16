@@ -43,6 +43,7 @@ bool topMoveNull;
 int bestMove, secondBestMove;
 
 // std::tuple as key in unordered map: https://stackoverflow.com/a/20835070
+std::mutex mx;
 std::unordered_map<hashdefs::ZobristTuple, TTResult, hashdefs::ZobristTupleHash> transposition;
 std::queue<hashdefs::ZobristTuple> hashKeys;
 
@@ -65,6 +66,7 @@ x = k/(2a + b)
 const int maxElements = maxSize / (2 * sizeof(hashdefs::ZobristTuple) + sizeof(TTResult));
 
 void table_insert(hashdefs::ZobristTuple hashes, TTResult result) {
+	mx.lock();
 	if (transposition.size() >= maxElements) {
 		hashdefs::ZobristTuple out = hashKeys.back();
 		hashKeys.pop();
@@ -72,6 +74,7 @@ void table_insert(hashdefs::ZobristTuple hashes, TTResult result) {
 	}
 	transposition.insert({ hashes, result });
 	hashKeys.push(hashes);
+	mx.unlock();
 }
 
 ull limit;
@@ -159,19 +162,21 @@ void search::pvs(int &result, const bitboard::Position &board, int depth, int al
 		return;
 	}
 
-	// hashdefs::ZobristTuple hashes = hash::hash(board);
-	// if (transposition.count(hashes)) {
-	// 	TTResult prev = transposition.at(hashes);
-	// 	if (prev.depth > depth)
-	// 		return prev.eval * (board.turn ? -1 : 1);
-	// 	for (int i = 0; i < moves.size(); i++) {
-	// 		if (moves[i] == prev.move) {
-	// 			moves.erase(moves.begin() + i);
-	// 			moves.insert(moves.begin(), prev.move);
-	// 			break;
-	// 		}
-	// 	}
-	// }
+	hashdefs::ZobristTuple hashes = hash::hash(board);
+	if (transposition.count(hashes)) {
+		TTResult prev = transposition.at(hashes);
+		if (prev.depth > depth) {
+			result = prev.eval * (board.turn ? -1 : 1);
+			return;
+		}
+		for (int i = 0; i < moves.size(); i++) {
+			if (moves[i] == prev.move) {
+				moves.erase(moves.begin() + i);
+				moves.insert(moves.begin(), prev.move);
+				break;
+			}
+		}
+	}
 
 	int *data;
 	std::vector<std::future<void>> results;
@@ -253,14 +258,16 @@ void search::pvs(int &result, const bitboard::Position &board, int depth, int al
 		}
 	}
 
-	// int scoreMinimax = score * (board.turn ? -1 : 1);
-	// if (transposition.count(hashes) == 0)
-	// 	table_insert(hashes, { scoreMinimax, topMove, depth });
-	// else {
-	// 	TTResult prev = transposition.at(hashes);
-	// 	if (depth > prev.depth)
-	// 		transposition[hashes] = { scoreMinimax, topMove, depth };
-	// }
+	if (transposition.count(hashes) == 0)
+		table_insert(hashes, { score * (board.turn ? -1 : 1), topMove, depth });
+	else {
+		TTResult prev = transposition.at(hashes);
+		if (depth > prev.depth) {
+			mx.lock();
+			transposition[hashes] = { score * (board.turn ? -1 : 1), topMove, depth };
+			mx.unlock();
+		}
+	}
 
 	if (depthFromStart == 0)
 		bestMove = topMove;
