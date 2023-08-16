@@ -39,7 +39,7 @@ ull movegen::get_pawn_attacks(int square, bool color) {
 ull movegen::get_knight_attacks(int square) {
 	return maps::knight[square];
 }
-ull movegen::get_bishop_attacks(const bitboard::Position &board, const ull &pieces_no_king, int square) {
+ull movegen::get_bishop_attacks(const ull &pieces_no_king, int square) {
 	ull attacks, blockers;
 
 	blockers = maps::bishop[square][0] & pieces_no_king;
@@ -68,7 +68,7 @@ ull movegen::get_bishop_attacks(const bitboard::Position &board, const ull &piec
 
 	return attacks;
 }
-ull movegen::get_rook_attacks(const bitboard::Position &board, const ull &pieces_no_king, int square) {
+ull movegen::get_rook_attacks(const ull &pieces_no_king, int square) {
 	ull attacks, blockers;
 	
 	blockers = maps::rook[square][0] & pieces_no_king;
@@ -97,8 +97,8 @@ ull movegen::get_rook_attacks(const bitboard::Position &board, const ull &pieces
 
 	return attacks;
 }
-ull movegen::get_queen_attacks(const bitboard::Position &board, const ull &pieces_no_king, int square) {
-	return get_bishop_attacks(board, pieces_no_king, square) | get_rook_attacks(board, pieces_no_king, square);
+ull movegen::get_queen_attacks(const ull &pieces_no_king, int square) {
+	return get_bishop_attacks(pieces_no_king, square) | get_rook_attacks(pieces_no_king, square);
 }
 ull get_king_attacks(int square) {
 	ull attacks = 0;
@@ -151,21 +151,21 @@ ull getAttacked(const bitboard::Position &board, bool color) {
 	pieces = board.pieces[color][BISHOP];
 	while (pieces) {
 		int pos = __builtin_ctzll(pieces);
-		attacks |= movegen::get_bishop_attacks(board, piecesNoKing, pos);
+		attacks |= movegen::get_bishop_attacks(piecesNoKing, pos);
 		SET0(pieces, pos);
 	}
 
 	pieces = board.pieces[color][ROOK];
 	while (pieces) {
 		int pos = __builtin_ctzll(pieces);
-		attacks |= movegen::get_rook_attacks(board, piecesNoKing, pos);
+		attacks |= movegen::get_rook_attacks(piecesNoKing, pos);
 		SET0(pieces, pos);
 	}
 	
 	pieces = board.pieces[color][QUEEN];
 	while (pieces) {
 		int pos = __builtin_ctzll(pieces);
-		attacks |= movegen::get_queen_attacks(board, piecesNoKing, pos);
+		attacks |= movegen::get_queen_attacks(piecesNoKing, pos);
 		SET0(pieces, pos);
 	}
 	
@@ -183,8 +183,8 @@ ull movegen::get_checks(const bitboard::Position &board, bool color) {
 
 	ull checks = get_pawn_attacks(kingPos, color) & board.pieces[!color][PAWN];
 	checks |= get_knight_attacks(kingPos) & board.pieces[!color][KNIGHT];
-	checks |= get_bishop_attacks(board, board.allPieces, kingPos) & (board.pieces[!color][BISHOP] | board.pieces[!color][QUEEN]);
-	checks |= get_rook_attacks(board, board.allPieces, kingPos) & (board.pieces[!color][ROOK] | board.pieces[!color][QUEEN]);
+	checks |= get_bishop_attacks(board.allPieces, kingPos) & (board.pieces[!color][BISHOP] | board.pieces[!color][QUEEN]);
+	checks |= get_rook_attacks(board.allPieces, kingPos) & (board.pieces[!color][ROOK] | board.pieces[!color][QUEEN]);
 	
 	return checks;
 }
@@ -485,7 +485,7 @@ void movegen::move_gen(const bitboard::Position &board, std::vector<int> &moves)
 	pieces = board.pieces[board.turn][BISHOP] & ~pinned;
 	while (pieces) {
 		int pos = __builtin_ctzll(pieces);
-		ull attacks = get_bishop_attacks(board, board.allPieces, pos) & ~board.pieces[board.turn][ALL] & blocks;
+		ull attacks = get_bishop_attacks(board.allPieces, pos) & ~board.pieces[board.turn][ALL] & blocks;
 		while (attacks) {
 			int dest = __builtin_ctzll(attacks);
 			moves.push_back(NEW_MOVE(pos, dest, 0, 0, 0));
@@ -497,7 +497,7 @@ void movegen::move_gen(const bitboard::Position &board, std::vector<int> &moves)
 	pieces = board.pieces[board.turn][BISHOP] & pinned;
 	while (pieces) {
 		int pos = __builtin_ctzll(pieces);
-		ull attacks = get_bishop_attacks(board, board.allPieces, pos) & maps::pinnedOffsetsAll[pos].at(kingPos - pos) & ~board.pieces[board.turn][ALL] & blocks;
+		ull attacks = get_bishop_attacks(board.allPieces, pos) & maps::pinnedOffsetsAll[pos].at(kingPos - pos) & ~board.pieces[board.turn][ALL] & blocks;
 		while (attacks) {
 			int dest = __builtin_ctzll(attacks);
 			moves.push_back(NEW_MOVE(pos, dest, 0, 0, 0));
@@ -509,7 +509,7 @@ void movegen::move_gen(const bitboard::Position &board, std::vector<int> &moves)
 	pieces = board.pieces[board.turn][ROOK] & ~pinned;
 	while (pieces) {
 		int pos = __builtin_ctzll(pieces);
-		ull attacks = get_rook_attacks(board, board.allPieces, pos) & ~board.pieces[board.turn][ALL] & blocks;
+		ull attacks = get_rook_attacks(board.allPieces, pos) & ~board.pieces[board.turn][ALL] & blocks;
 		while (attacks) {
 			int dest = __builtin_ctzll(attacks);
 			moves.push_back(NEW_MOVE(pos, dest, 0, 0, 0));
@@ -521,7 +521,7 @@ void movegen::move_gen(const bitboard::Position &board, std::vector<int> &moves)
 	pieces = board.pieces[board.turn][ROOK] & pinned;
 	while (pieces) {
 		int pos = __builtin_ctzll(pieces);
-		ull attacks = get_rook_attacks(board, board.allPieces, pos) & maps::pinnedOffsetsAll[pos].at(kingPos - pos) & ~board.pieces[board.turn][ALL] & blocks;
+		ull attacks = get_rook_attacks(board.allPieces, pos) & maps::pinnedOffsetsAll[pos].at(kingPos - pos) & ~board.pieces[board.turn][ALL] & blocks;
 		while (attacks) {
 			int dest = __builtin_ctzll(attacks);
 			moves.push_back(NEW_MOVE(pos, dest, 0, 0, 0));
@@ -533,7 +533,7 @@ void movegen::move_gen(const bitboard::Position &board, std::vector<int> &moves)
 	pieces = board.pieces[board.turn][QUEEN] & ~pinned;
 	while (pieces) {
 		int pos = __builtin_ctzll(pieces);
-		ull attacks = get_queen_attacks(board, board.allPieces, pos) & ~board.pieces[board.turn][ALL] & blocks;
+		ull attacks = get_queen_attacks(board.allPieces, pos) & ~board.pieces[board.turn][ALL] & blocks;
 		while (attacks) {
 			int dest = __builtin_ctzll(attacks);
 			moves.push_back(NEW_MOVE(pos, dest, 0, 0, 0));
@@ -545,7 +545,7 @@ void movegen::move_gen(const bitboard::Position &board, std::vector<int> &moves)
 	pieces = board.pieces[board.turn][QUEEN] & pinned;
 	while (pieces) {
 		int pos = __builtin_ctzll(pieces);
-		ull attacks = get_queen_attacks(board, board.allPieces, pos) & maps::pinnedOffsetsAll[pos].at(kingPos - pos) & ~board.pieces[board.turn][ALL] & blocks;
+		ull attacks = get_queen_attacks(board.allPieces, pos) & maps::pinnedOffsetsAll[pos].at(kingPos - pos) & ~board.pieces[board.turn][ALL] & blocks;
 		while (attacks) {
 			int dest = __builtin_ctzll(attacks);
 			moves.push_back(NEW_MOVE(pos, dest, 0, 0, 0));
