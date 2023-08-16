@@ -308,7 +308,7 @@ void movegen::move_gen(const bitboard::Position &board, std::vector<int> &moves)
 	ull attacked = getAttacked(board, board.turn);
 	ull checks = get_checks(board, board.turn);
 	ull pinned = getPinned(board, board.turn);
-	ull pieces, blocks, kingCannotMoveTo;
+	ull pieces, blocks;
 
 	int kingPos = __builtin_ctzll(board.pieces[board.turn][KING]);
 	if (board.enPassant != -1) {

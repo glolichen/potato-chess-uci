@@ -21,7 +21,7 @@ std::vector<std::string> bitboard::split(std::string str, char split_on) {
 	std::vector<std::string> result;
 
 	int left = 0;
-	for (int i = 0; i < str.length(); i++) {
+	for (size_t i = 0; i < str.length(); i++) {
 		if (str[i] == split_on) {
 			result.push_back(str.substr(left, i - left));
 			left = i + 1;
@@ -88,7 +88,7 @@ void bitboard::decode(std::string fen) {
 	for (int i = 0; i < 8; i++) {
 		int cur = 0;
 		std::string cur_rank = line[i];
-		for (int j = 0; j < cur_rank.size(); j++) {
+		for (size_t j = 0; j < cur_rank.size(); j++) {
 			if (isdigit(cur_rank[j])) {
 				cur += cur_rank[j] - '0';
 				continue;

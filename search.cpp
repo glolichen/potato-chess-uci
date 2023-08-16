@@ -90,7 +90,7 @@ bool is_time_up() {
 // algorithm from: https://www.chessprogramming.org/Quiescence_Search
 int quiescence(const bitboard::Position &board, int alpha, int beta, int depth) {
 	nodes++;
-	if (nodes & (NODES_PER_TIME_CHECK - 1) == (NODES_PER_TIME_CHECK - 1) && is_time_up())
+	if ((nodes & (NODES_PER_TIME_CHECK - 1)) == (NODES_PER_TIME_CHECK - 1) && is_time_up())
 		return SEARCH_EXPIRED;
 
 	int doNothingScore = eval::evaluate(board) * (board.turn ? -1 : 1);
@@ -128,7 +128,7 @@ int quiescence(const bitboard::Position &board, int alpha, int beta, int depth) 
 
 void search::pvs(int &result, const bitboard::Position &board, int depth, int alpha, int beta, int depthFromStart, bool useThreads) {
 	nodes++;
-	if (nodes & (NODES_PER_TIME_CHECK - 1) == (NODES_PER_TIME_CHECK - 1) && is_time_up()) {
+	if ((nodes & (NODES_PER_TIME_CHECK - 1)) == (NODES_PER_TIME_CHECK - 1) && is_time_up()) {
 		result = SEARCH_EXPIRED;
 		return;
 	}
@@ -137,7 +137,7 @@ void search::pvs(int &result, const bitboard::Position &board, int depth, int al
 	movegen::move_gen_with_ordering(board, moves);
 
 	if (depthFromStart == 0 && !topMoveNull) {
-		for (int i = 0; i < moves.size(); i++) {
+		for (size_t i = 0; i < moves.size(); i++) {
 			if (moves[i] == bestMove) {
 				moves.erase(moves.begin() + i);
 				break;
@@ -169,7 +169,7 @@ void search::pvs(int &result, const bitboard::Position &board, int depth, int al
 			result = prev.eval * (board.turn ? -1 : 1);
 			return;
 		}
-		for (int i = 0; i < moves.size(); i++) {
+		for (size_t i = 0; i < moves.size(); i++) {
 			if (moves[i] == prev.move) {
 				moves.erase(moves.begin() + i);
 				moves.insert(moves.begin(), prev.move);
@@ -183,8 +183,8 @@ void search::pvs(int &result, const bitboard::Position &board, int depth, int al
 	if (useThreads)
 		data = new int[moves.size()];
 
-	int topMove, score = INT_MIN;
-	for (int i = 0; i < moves.size(); i++) {
+	int topMove = moves[0], score = INT_MIN;
+	for (size_t i = 0; i < moves.size(); i++) {
 		bitboard::Position newBoard;
 		memcpy(&newBoard, &board, sizeof(board));
 		if (board.mailbox[DEST(moves[i])] != -1 || board.mailbox[SOURCE(moves[i])] == PAWN || board.mailbox[SOURCE(moves[i])] == PAWN + 6)
@@ -241,9 +241,9 @@ void search::pvs(int &result, const bitboard::Position &board, int depth, int al
 	}
 
 	if (useThreads) {
-		for (int i = 0; i < results.size(); i++)
+		for (size_t i = 0; i < results.size(); i++)
 			results[i].get();
-		for (int i = 1; i < moves.size(); i++) {
+		for (size_t i = 1; i < moves.size(); i++) {
 			if (data[i] == -SEARCH_EXPIRED) {
 				result = SEARCH_EXPIRED;
 				goto end;
