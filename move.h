@@ -2,6 +2,7 @@
 #define MOVE_H
 
 #include <string>
+#include "bitboard.h"
 
 #define NEW_MOVE(source, dest, castle, promote, isEp) (isEp | ((promote) << 1) | ((castle) << 4) | ((dest) << 6) | ((source) << 12))
 #define SOURCE(move) (((move) >> 12) & 0b111111)

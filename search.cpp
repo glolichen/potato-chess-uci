@@ -314,9 +314,10 @@ search::SearchResult search::search(bitboard::Position &board, int timeMS) {
 		depth = searchDepth;
 	bool is_mate = false;
 
-	int eval;
+	bool extensionBonus = false;
+	int eval = 0, prevEval = 0, prevBestMove = 0;
 	while (true) {
-		nodes = 0;
+		nodes = 0, prevEval = eval, prevBestMove = bestMove;
 		search::pvs(eval, board, depth, INT_MIN + 2, INT_MAX - 2, 0, true);
 		topMoveNull = false;
 
@@ -350,6 +351,15 @@ search::SearchResult search::search(bitboard::Position &board, int timeMS) {
 
 		if (searchDepth != -1)
 			break;
+
+		if (prevBestMove == bestMove) {
+			if (depth >= 6 && (std::abs(eval - prevEval) < 40))
+				break;
+			if (depth >= 6 && (eval > 700 && prevEval > 700))
+				break;
+		}
+		if (depth >= 5 && bestMove != prevBestMove && std::abs(eval - prevEval) > 200 && !extensionBonus)
+			limit += 2 * time;
 
 		depth++;
 	}
