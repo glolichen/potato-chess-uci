@@ -356,9 +356,9 @@ search::SearchResult search::search(bitboard::Position &board, int timeMS) {
 			break;
 
 		if (prevBestMove == bestMove) {
-			if (depth >= 6 && ((eval > 300 && prevEval > 300) || std::abs(eval - prevEval) < 40))
+			if (depth >= 6 && ((eval > 500 && prevEval > 500) || std::abs(eval - prevEval) < 40))
 				break;
-			if (depth >= 5 && (bestMove - secondBestEval > 300 || std::abs(eval - prevEval) < 20 || (eval > 500 && prevEval > 500)))
+			if (depth >= 5 && (bestMove - secondBestEval > 300 || std::abs(eval - prevEval) < 20))
 				break;
 		}
 		if (depth >= 5 && bestMove != prevBestMove && std::abs(eval - prevEval) > 200 && !extensionBonus)
