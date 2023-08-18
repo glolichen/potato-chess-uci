@@ -5,7 +5,6 @@
 #include "bitboard.h"
 #include "move.h"
 #include "hash.h"
-#include "hashdefs.h"
 
 std::string move::to_string(int move) {
 	std::stringstream ss;

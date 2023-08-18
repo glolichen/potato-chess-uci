@@ -16,6 +16,7 @@ std::string bitboard::squares[64] = {
 };
 std::string bitboard::pieces = "PNBRQKpnbrqk";
 bitboard::Position bitboard::board;
+std::unordered_set<ull> bitboard::prevPositions;
 
 std::vector<std::string> bitboard::split(std::string str, char split_on) {
 	std::vector<std::string> result;

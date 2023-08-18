@@ -72,6 +72,7 @@ int main() {
 			}
 
 
+			bitboard::prevPositions.emplace(hash::get_hash(bitboard::board));
 			if (!ss.eof()) {
 				ss >> token;
 				if (token == "moves") {
@@ -79,6 +80,7 @@ int main() {
 						ss >> token;
 						int move = move::uci_to_move(bitboard::board, token);
 						move::make_move(bitboard::board, move);
+						bitboard::prevPositions.emplace(hash::get_hash(bitboard::board));
 						totalHalfMoves++;
 
 						// std::cout << move::to_string(move) << "\n";

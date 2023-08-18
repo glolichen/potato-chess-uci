@@ -40,12 +40,13 @@ struct TTResult {
 ctpl::thread_pool tp(THREAD_COUNT);
 
 bool topMoveNull;
-int bestMove, secondBestMove;
+int bestMove;
+int secondBestEval;
 
 // std::tuple as key in unordered map: https://stackoverflow.com/a/20835070
 std::mutex mx;
-std::unordered_map<hashdefs::ZobristTuple, TTResult, hashdefs::ZobristTupleHash> transposition;
-std::queue<hashdefs::ZobristTuple> hashKeys;
+std::unordered_map<ull, TTResult> transposition;
+std::queue<ull> hashKeys;
 
 const ull maxSize = TT_SIZE_MB * 1024 * 1024;
 /*
@@ -63,12 +64,12 @@ ax + bx + ax = k
 x(2a + b) = k
 x = k/(2a + b)
 */
-const int maxElements = maxSize / (2 * sizeof(hashdefs::ZobristTuple) + sizeof(TTResult));
+const int maxElements = maxSize / (2 * sizeof(ull) + sizeof(TTResult));
 
-void table_insert(hashdefs::ZobristTuple hashes, TTResult result) {
+void table_insert(ull hashes, TTResult result) {
 	mx.lock();
 	if (transposition.size() >= maxElements) {
-		hashdefs::ZobristTuple out = hashKeys.back();
+		ull out = hashKeys.back();
 		hashKeys.pop();
 		transposition.erase(out);
 	}
@@ -162,10 +163,14 @@ void search::pvs(int &result, const bitboard::Position &board, int depth, int al
 		return;
 	}
 
-	hashdefs::ZobristTuple hashes = hash::hash(board);
-	if (transposition.count(hashes)) {
-		TTResult prev = transposition.at(hashes);
-		if (prev.depth > depth) {
+	ull hash = hash::get_hash(board);
+	if (depthFromStart && depthFromStart <= 4 && bitboard::prevPositions.count(hash)) {
+		result = 0;
+		return;
+	}
+	if (transposition.count(hash)) {
+		TTResult prev = transposition.at(hash);
+		if (prev.depth > depth && depthFromStart) {
 			result = prev.eval * (board.turn ? -1 : 1);
 			return;
 		}
@@ -233,6 +238,7 @@ void search::pvs(int &result, const bitboard::Position &board, int depth, int al
 		}
 
 		if (curEval > alpha) {
+			secondBestEval = alpha;
 			alpha = curEval;
 			topMove = moves[i];
 		}
@@ -250,6 +256,7 @@ void search::pvs(int &result, const bitboard::Position &board, int depth, int al
 			}
 
 			if (data[i] > alpha) {
+				secondBestEval = alpha;
 				alpha = data[i];
 				topMove = moves[i];
 			}
@@ -258,13 +265,13 @@ void search::pvs(int &result, const bitboard::Position &board, int depth, int al
 		}
 	}
 
-	if (transposition.count(hashes) == 0)
-		table_insert(hashes, { score * (board.turn ? -1 : 1), topMove, depth });
+	if (transposition.count(hash) == 0)
+		table_insert(hash, { score * (board.turn ? -1 : 1), topMove, depth });
 	else {
-		TTResult prev = transposition.at(hashes);
+		TTResult prev = transposition.at(hash);
 		if (depth > prev.depth) {
 			mx.lock();
-			transposition[hashes] = { score * (board.turn ? -1 : 1), topMove, depth };
+			transposition[hash] = { score * (board.turn ? -1 : 1), topMove, depth };
 			mx.unlock();
 		}
 	}
@@ -299,10 +306,6 @@ search::SearchResult search::search(bitboard::Position &board, int timeMS) {
 		time = timeMS;
 
 	topMoveNull = true;
-
-	eval::init();
-	hash::init();
-	maps::init();
 
 	limit = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 	limit += time;
@@ -353,9 +356,9 @@ search::SearchResult search::search(bitboard::Position &board, int timeMS) {
 			break;
 
 		if (prevBestMove == bestMove) {
-			if (depth >= 6 && (std::abs(eval - prevEval) < 40))
+			if (depth >= 6 && ((eval > 300 && prevEval > 300) || std::abs(eval - prevEval) < 40))
 				break;
-			if (depth >= 6 && (eval > 700 && prevEval > 700))
+			if (depth >= 5 && (bestMove - secondBestEval > 300 || std::abs(eval - prevEval) < 20 || (eval > 500 && prevEval > 500)))
 				break;
 		}
 		if (depth >= 5 && bestMove != prevBestMove && std::abs(eval - prevEval) > 200 && !extensionBonus)

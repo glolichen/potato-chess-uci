@@ -4,8 +4,7 @@
 #include <string>
 #include <vector>
 #include <map>
-
-#include "hashdefs.h"
+#include <unordered_set>
 
 #define SET1(bitboard, pos) (bitboard |= 1ull << (pos))
 #define SET0(bitboard, pos) (bitboard ^= 1ull << (pos))
@@ -44,6 +43,8 @@ namespace bitboard {
 	
 	extern std::string squares[];
 	extern std::string pieces;
+
+	extern std::unordered_set<ull> prevPositions;
 
 	std::vector<std::string> split(std::string str, char splitOn);
 
