@@ -27,14 +27,15 @@ add soon:
 
 #define DELTA_CUTOFF 800
 #define QUISCENCE_DEPTH 5
-#define TT_SIZE_MB 512
+#define TT_KEEP_MOVE_COUNT 5
 #define NODES_PER_TIME_CHECK 8192
 #define THREAD_COUNT 8
+#define INT_MIN_PLUS_1 (INT_MIN + 1)
 
-const int SEARCH_EXPIRED = INT_MIN + 500;
+const int SEARCH_EXPIRED = INT_MIN_PLUS_1 + 500;
 
 struct TTResult {
-	int eval, move, depth;
+	int eval, move, depth, moveNum;
 };
 
 ctpl::thread_pool tp(THREAD_COUNT);
@@ -43,49 +44,22 @@ bool topMoveNull;
 int bestMove;
 int secondBestEval;
 
-// std::tuple as key in unordered map: https://stackoverflow.com/a/20835070
+int moveNum = 0;
+
 std::mutex mx;
 std::unordered_map<ull, TTResult> transposition;
-std::queue<ull> hashKeys;
 
-const ull maxSize = TT_SIZE_MB * 1024 * 1024;
-/*
-let a = size of zobrist tuple
-let b = size of ttresult
-let k = max size
-let x = max entries
-
-S_transposition = x(a + b) = ax + bx
-S_hashKeys = ax
-
-S_transposition + S_hashKeys = k
-ax + bx + ax = k
-2ax + bx = k
-x(2a + b) = k
-x = k/(2a + b)
-*/
-const int maxElements = maxSize / (2 * sizeof(ull) + sizeof(TTResult));
-
-void table_insert(ull hashes, TTResult result) {
+void table_insert(ull hash, TTResult result) {
 	mx.lock();
-	if (transposition.size() >= maxElements) {
-		ull out = hashKeys.back();
-		hashKeys.pop();
-		transposition.erase(out);
-	}
-	transposition.insert({ hashes, result });
-	hashKeys.push(hashes);
+	transposition.insert({ hash, result });
 	mx.unlock();
 }
 
 ull limit;
-
 ull nodes;
 bool is_time_up() {
 	ull now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-	if (now >= limit)
-		return true;
-	return false;
+	return now >= limit;
 }
 
 // algorithm from: https://www.chessprogramming.org/Quiescence_Search
@@ -98,7 +72,7 @@ int quiescence(const bitboard::Position &board, int alpha, int beta, int depth) 
 	if (doNothingScore >= beta)
 		return beta;
 
-	if (alpha <= INT_MIN + 1 && alpha >= INT_MAX - 1 && doNothingScore < alpha - DELTA_CUTOFF)
+	if (alpha <= INT_MIN_PLUS_1 + 1 && alpha >= INT_MAX - 1 && doNothingScore < alpha - DELTA_CUTOFF)
 		return alpha;
 
 	alpha = std::max(doNothingScore, alpha);
@@ -148,12 +122,12 @@ void search::pvs(int &result, const bitboard::Position &board, int depth, int al
 	}
 
 	if (moves.size() == 0) {
-		result = movegen::get_checks(board, board.turn) ? INT_MIN + depthFromStart + 1 : 0;
+		result = movegen::get_checks(board, board.turn) ? INT_MIN_PLUS_1 + depthFromStart + 1 : 0;
 		return;
 	}
 
 	if (depth == 0) {		
-		result = quiescence(board, INT_MIN, INT_MAX, QUISCENCE_DEPTH);
+		result = quiescence(board, INT_MIN_PLUS_1, INT_MAX, QUISCENCE_DEPTH);
 		// result = eval::evaluate(board) * (board.turn ? -1 : 1);
 		return;
 	}
@@ -168,18 +142,20 @@ void search::pvs(int &result, const bitboard::Position &board, int depth, int al
 		result = 0;
 		return;
 	}
-	if (transposition.count(hash)) {
-		TTResult prev = transposition.at(hash);
-		if (prev.depth > depth && depthFromStart) {
-			result = prev.eval * (board.turn ? -1 : 1);
-			return;
-		}
+	auto it = transposition.find(hash);
+	if (it != transposition.end()) {
+		bool contains = false;
 		for (size_t i = 0; i < moves.size(); i++) {
-			if (moves[i] == prev.move) {
+			if (moves[i] == it->second.move) {
 				moves.erase(moves.begin() + i);
-				moves.insert(moves.begin(), prev.move);
+				moves.insert(moves.begin(), it->second.move);
+				contains = true;
 				break;
 			}
+		}
+		if (contains && it->second.depth > depth && depthFromStart) {
+			result = it->second.eval * (board.turn ? -1 : 1);
+			return;
 		}
 	}
 
@@ -188,7 +164,7 @@ void search::pvs(int &result, const bitboard::Position &board, int depth, int al
 	if (useThreads)
 		data = new int[moves.size()];
 
-	int topMove = moves[0], score = INT_MIN;
+	int topMove = moves[0];
 	for (size_t i = 0; i < moves.size(); i++) {
 		bitboard::Position newBoard;
 		memcpy(&newBoard, &board, sizeof(board));
@@ -238,7 +214,8 @@ void search::pvs(int &result, const bitboard::Position &board, int depth, int al
 		}
 
 		if (curEval > alpha) {
-			secondBestEval = alpha;
+			if (depthFromStart == 0)
+				secondBestEval = alpha;
 			alpha = curEval;
 			topMove = moves[i];
 		}
@@ -256,7 +233,8 @@ void search::pvs(int &result, const bitboard::Position &board, int depth, int al
 			}
 
 			if (data[i] > alpha) {
-				secondBestEval = alpha;
+				if (depthFromStart == 0)
+					secondBestEval = alpha;
 				alpha = data[i];
 				topMove = moves[i];
 			}
@@ -265,13 +243,13 @@ void search::pvs(int &result, const bitboard::Position &board, int depth, int al
 		}
 	}
 
-	if (transposition.count(hash) == 0)
-		table_insert(hash, { score * (board.turn ? -1 : 1), topMove, depth });
+	it = transposition.find(hash);
+	if (it == transposition.end())
+		table_insert(hash, { alpha * (board.turn ? -1 : 1), topMove, depth, moveNum });
 	else {
-		TTResult prev = transposition.at(hash);
-		if (depth > prev.depth) {
+		if (depth > it->second.depth) {
 			mx.lock();
-			transposition[hash] = { score * (board.turn ? -1 : 1), topMove, depth };
+			transposition[hash] = { alpha * (board.turn ? -1 : 1), topMove, depth, moveNum };
 			mx.unlock();
 		}
 	}
@@ -286,7 +264,7 @@ void search::pvs(int &result, const bitboard::Position &board, int depth, int al
 		delete[] data;
 }
 
-search::SearchResult search::search(bitboard::Position &board, int timeMS) {
+search::SearchResult search::search(bitboard::Position &board, int time_MS, int depth, bool full_search) {
 	// iterative deepening
 	// search with depth of one ply first
 	// then increase depth until time runs out
@@ -297,31 +275,20 @@ search::SearchResult search::search(bitboard::Position &board, int timeMS) {
 	// but we can use alpha and beta values from before to speed up pruning
 	// and we can search the best move first in the deeper search
 
-	int time, searchDepth = -1;
-	if (timeMS < 0) {
-		time = 10000000;
-		searchDepth = -timeMS;
-	}
-	else
-		time = timeMS;
-
 	topMoveNull = true;
 
 	limit = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-	limit += time;
+	limit += (time_MS == -1 ? INT_MAX : time_MS);
 	
-	std::pair<int, int> best;
-
-	int depth = 1;
-	if (searchDepth != -1)
-		depth = searchDepth;
+	if (time_MS != -1)
+		depth = 3;
 	bool is_mate = false;
 
 	bool extensionBonus = false;
 	int eval = 0, prevEval = 0, prevBestMove = 0;
 	while (true) {
 		nodes = 0, prevEval = eval, prevBestMove = bestMove;
-		search::pvs(eval, board, depth, INT_MIN + 2, INT_MAX - 2, 0, true);
+		search::pvs(eval, board, depth, INT_MIN_PLUS_1 + 2, INT_MAX - 2, 0, true);
 		topMoveNull = false;
 
 		if (eval == SEARCH_EXPIRED) {
@@ -331,51 +298,55 @@ search::SearchResult search::search(bitboard::Position &board, int timeMS) {
 
 		std::cout << "info depth " << std::to_string(depth) << " nodes " << nodes << " currmove " << move::to_string(bestMove) << " score ";
 
-		best.first = bestMove;
-		best.second = eval;
-
 		// checkmate has been found, do not need to search any more
 		int isMate = eval_is_mate(eval);
 		if (isMate != -1) {
 			std::cout << "mate ";
-			if (eval > 0)
-				std::cout << (int) ((INT_MAX - eval) / 2.0 + 0.5);
-			else
-				std::cout << "-" << (int) ((eval - INT_MIN - 1) / 2.0 + 0.5);
-			std::cout << "\n";
-
-			if (isMate == board.turn) {
-				is_mate = true;
+			if (eval > 0) {
+				std::cout << (int) ((INT_MAX - eval) / 2.0 + 0.5) << "\n";
 				break;
 			}
+			else
+				std::cout << "-" << (int) ((eval - INT_MIN_PLUS_1 - 1) / 2.0 + 0.5) << "\n";
 		}
 		else
 			std::cout << "cp " << eval << "\n";
 
-		if (searchDepth != -1)
+		if (time_MS == -1)
 			break;
 
-		if (prevBestMove == bestMove) {
-			if (depth >= 6 && ((eval > 500 && prevEval > 500) || std::abs(eval - prevEval) < 40))
+		if (!full_search && prevBestMove == bestMove && eval < 900) {
+			if (depth >= 6 && (eval - secondBestEval > 150 || std::abs(eval - prevEval) < 60))
 				break;
-			if (depth >= 5 && (bestMove - secondBestEval > 300 || std::abs(eval - prevEval) < 20))
+			if (depth >= 5 && (eval - secondBestEval > 100 && std::abs(eval - prevEval) < 60))
 				break;
 		}
-		if (depth >= 5 && bestMove != prevBestMove && std::abs(eval - prevEval) > 200 && !extensionBonus)
-			limit += 2 * time;
+		if (depth >= 5 && bestMove != prevBestMove && std::abs(eval - prevEval) > 150 && !extensionBonus) {
+			extensionBonus = true;
+			limit += 1.5 * time_MS;
+		}
 
 		depth++;
 	}
 
+	moveNum++;
+	// https://stackoverflow.com/a/8234813
+	for (auto it = transposition.begin(); it != transposition.end();) {
+		if (it->second.moveNum >= moveNum - TT_KEEP_MOVE_COUNT)
+			transposition.erase(it++);
+		else
+			it++;
+	}
+
 	// transposition.clear();
 
-	return { best.first, depth, best.second, is_mate };
+	return { bestMove, depth + (extensionBonus ? 100 : 0), eval, is_mate };
 }
 
 int search::eval_is_mate(int eval) {
 	if (eval > INT_MAX - 250)
 		return WHITE;
-	if (eval < INT_MIN + 250)
+	if (eval < INT_MIN_PLUS_1 + 250)
 		return BLACK;
 	return -1;
 }
