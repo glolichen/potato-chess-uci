@@ -21,6 +21,7 @@ int main() {
 	srand(time(0));
 
 	maps::init();
+	eval::init();
 	hash::init();
 
 	// bitboard::decode("r3k2r/Pppp1ppp/1b3nbN/nPP5/BB2P3/q4N2/Pp1P2PP/R2Q1RK1 b kq - 0 1");
@@ -131,9 +132,9 @@ int main() {
 				move = moves[0];
 			else {
 				if (movetime != -1)
-					res = search::search(bitboard::board, movetime);
+					res = search::search(bitboard::board, movetime, -1, true);
 				else if (depth != -1)
-					res = search::search(bitboard::board, -depth);
+					res = search::search(bitboard::board, -1, depth, false);
 				else {
 					int remainingTime = bitboard::board.turn ? btime : wtime;
 					int inc = bitboard::board.turn ? binc : winc;
@@ -142,7 +143,7 @@ int main() {
 
 					int time = timeman::calc_base_time(remainingTime, totalHalfMoves / 2) - options["Move Overhead"];
 					time = std::max(100, time);
-					res = search::search(bitboard::board, time + (inc * 0.5));
+					res = search::search(bitboard::board, time + (inc * 0.5), -1, false);
 				}
 				move = res.move;
 			}
