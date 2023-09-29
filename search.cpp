@@ -320,6 +320,8 @@ search::SearchResult search::search(bitboard::Position &board, int time_MS, int 
 				break;
 			if (depth >= 5 && (eval - secondBestEval > 100 && std::abs(eval - prevEval) < 60))
 				break;
+			if (depth >= 5 && eval - secondBestEval > 250)
+				break;
 		}
 		if (depth >= 5 && bestMove != prevBestMove && std::abs(eval - prevEval) > 150 && !extensionBonus) {
 			extensionBonus = true;
