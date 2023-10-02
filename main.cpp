@@ -5,6 +5,7 @@
 #include <format>
 #include <fstream>
 #include <unordered_map>
+#include <vector>
 
 #include "bitboard.h"
 #include "eval.h"
@@ -23,20 +24,6 @@ int main() {
 	maps::init();
 	eval::init();
 	hash::init();
-
-	// bitboard::decode("r3k2r/Pppp1ppp/1b3nbN/nPP5/BB2P3/q4N2/Pp1P2PP/R2Q1RK1 b kq - 0 1");
-	// // move::make_move(bitboard::board, 46784);
-	// // bitboard::decode("8/2p5/8/1P1p3r/KR3p1k/8/4P1P1/8 w - - 0 2");
-	// // move::make_move(bitboard::board, 38464);
-	// bitboard::print_board(bitboard::board);
-
-	// std::vector<int> moves;
-	// movegen::move_gen(bitboard::board, moves);
-	// for (int move : moves)
-	// 	std::cout << move::to_string(move) << ", ";
-	// std::cout << moves.size();
-
-	// return 0;
 
 	book::book_open("/home/jayden/Desktop/Programs/potato-chess/potato-chess-uci/books/Book.bin");
 
@@ -114,6 +101,9 @@ int main() {
 				}
 				else if (token == "depth")
 					ss >> depth;
+				else if (token == "ponder") {
+					std::cout << "asked to ponder, what to do?\n";
+				}
 			}
 
 			int bookMove = book::book_move(bitboard::board);
@@ -132,10 +122,10 @@ int main() {
 				move = moves[0];
 			else {
 				if (movetime != -1)
-					res = search::search(bitboard::board, movetime, -1, true);
+					res = search::search_by_time(bitboard::board, movetime, true);
 				else if (depth != -1)
-					res = search::search(bitboard::board, -1, depth, false);
-				else {
+					res = search::search_by_depth(bitboard::board, depth);
+				else if (winc != -1 && binc != -1) {
 					int remainingTime = bitboard::board.turn ? btime : wtime;
 					int inc = bitboard::board.turn ? binc : winc;
 					if (inc == -1)
@@ -143,7 +133,12 @@ int main() {
 
 					int time = timeman::calc_base_time(remainingTime, totalHalfMoves / 2) - options["Move Overhead"];
 					time = std::max(100, time);
-					res = search::search(bitboard::board, time + (inc * 0.5), -1, false);
+					res = search::search_by_time(bitboard::board, time + (inc * 0.5), false);
+
+					search::table_clear();
+				}
+				else {
+					res = search::search_unlimited(bitboard::board);
 				}
 				move = res.move;
 			}

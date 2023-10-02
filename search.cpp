@@ -55,6 +55,17 @@ void table_insert(ull hash, TTResult result) {
 	mx.unlock();
 }
 
+void search::table_clear() {
+	moveNum++;
+	// https://stackoverflow.com/a/8234813
+	for (auto it = transposition.begin(); it != transposition.end();) {
+		if (it->second.moveNum >= moveNum - TT_KEEP_MOVE_COUNT)
+			transposition.erase(it++);
+		else
+			it++;
+	}
+}
+
 ull limit;
 ull nodes;
 bool is_time_up() {
@@ -84,11 +95,11 @@ int quiescence(const bitboard::Position &board, int alpha, int beta, int depth) 
 		if (board.mailbox[DEST(move)] == -1)
 			continue;
 
-		bitboard::Position new_board;
-		memcpy(&new_board, &board, sizeof(board));
-		move::make_move(new_board, move);
+		bitboard::Position newBoard;
+		memcpy(&newBoard, &board, sizeof(board));
+		move::make_move(newBoard, move);
 
-		int score = quiescence(new_board, -beta, -alpha, depth - 1);
+		int score = quiescence(newBoard, -beta, -alpha, depth - 1);
 		if (score == SEARCH_EXPIRED)
 			return SEARCH_EXPIRED;
 		score *= -1;
@@ -101,7 +112,7 @@ int quiescence(const bitboard::Position &board, int alpha, int beta, int depth) 
 	return alpha;
 }
 
-void search::pvs(int &result, const bitboard::Position &board, int depth, int alpha, int beta, int depthFromStart, bool useThreads) {
+void search::pvs(int &result, const bitboard::Position &board, int depth, int alpha, int beta, int depth_from_start, bool use_threads) {
 	nodes++;
 	if ((nodes & (NODES_PER_TIME_CHECK - 1)) == (NODES_PER_TIME_CHECK - 1) && is_time_up()) {
 		result = SEARCH_EXPIRED;
@@ -111,7 +122,7 @@ void search::pvs(int &result, const bitboard::Position &board, int depth, int al
 	std::vector<int> moves;
 	movegen::move_gen_with_ordering(board, moves);
 
-	if (depthFromStart == 0 && !topMoveNull) {
+	if (depth_from_start == 0 && !topMoveNull) {
 		for (size_t i = 0; i < moves.size(); i++) {
 			if (moves[i] == bestMove) {
 				moves.erase(moves.begin() + i);
@@ -122,7 +133,7 @@ void search::pvs(int &result, const bitboard::Position &board, int depth, int al
 	}
 
 	if (moves.size() == 0) {
-		result = movegen::get_checks(board, board.turn) ? INT_MIN_PLUS_1 + depthFromStart + 1 : 0;
+		result = movegen::get_checks(board, board.turn) ? INT_MIN_PLUS_1 + depth_from_start + 1 : 0;
 		return;
 	}
 
@@ -138,7 +149,7 @@ void search::pvs(int &result, const bitboard::Position &board, int depth, int al
 	}
 
 	ull hash = hash::get_hash(board);
-	if (depthFromStart && depthFromStart <= 4 && bitboard::prevPositions.count(hash)) {
+	if (depth_from_start && depth_from_start <= 4 && bitboard::prevPositions.count(hash)) {
 		result = 0;
 		return;
 	}
@@ -153,7 +164,7 @@ void search::pvs(int &result, const bitboard::Position &board, int depth, int al
 				break;
 			}
 		}
-		if (contains && it->second.depth > depth && depthFromStart) {
+		if (contains && it->second.depth > depth && depth_from_start) {
 			result = it->second.eval * (board.turn ? -1 : 1);
 			return;
 		}
@@ -161,7 +172,7 @@ void search::pvs(int &result, const bitboard::Position &board, int depth, int al
 
 	int *data;
 	std::vector<std::future<void>> results;
-	if (useThreads)
+	if (use_threads)
 		data = new int[moves.size()];
 
 	int topMove = moves[0];
@@ -176,7 +187,7 @@ void search::pvs(int &result, const bitboard::Position &board, int depth, int al
 		
 		int curEval;
 		if (i == 0) {
-			search::pvs(curEval, newBoard, depth - 1, -beta, -alpha, depthFromStart + 1, useThreads);
+			search::pvs(curEval, newBoard, depth - 1, -beta, -alpha, depth_from_start + 1, use_threads);
 			if (curEval == SEARCH_EXPIRED) {
 				result = SEARCH_EXPIRED;
 				goto end;
@@ -184,26 +195,26 @@ void search::pvs(int &result, const bitboard::Position &board, int depth, int al
 			curEval *= -1;
 		}
 		else {
-			if (useThreads) {
-				results.push_back(tp.push([&data, i, newBoard, depth, alpha, beta, depthFromStart](int) {
-					search::pvs(data[i], newBoard, depth - 1, -alpha - 1, -alpha, depthFromStart + 1, false);
+			if (use_threads) {
+				results.push_back(tp.push([&data, i, newBoard, depth, alpha, beta, depth_from_start](int) {
+					search::pvs(data[i], newBoard, depth - 1, -alpha - 1, -alpha, depth_from_start + 1, false);
 					data[i] *= -1;
 					if (data[i] > alpha) {
-						search::pvs(data[i], newBoard, depth - 1, -beta, -data[i], depthFromStart + 1, false);
+						search::pvs(data[i], newBoard, depth - 1, -beta, -data[i], depth_from_start + 1, false);
 						data[i] *= -1;
 					}
 				}));
 				continue;
 			}
 			else {
-				search::pvs(curEval, newBoard, depth - 1, -alpha - 1, -alpha, depthFromStart + 1, false);
+				search::pvs(curEval, newBoard, depth - 1, -alpha - 1, -alpha, depth_from_start + 1, false);
 				if (curEval == SEARCH_EXPIRED) {
 					result = SEARCH_EXPIRED;
 					return;
 				}
 				curEval *= -1;
 				if (curEval > alpha) {
-					search::pvs(curEval, newBoard, depth - 1, -beta, -curEval, depthFromStart + 1, false);
+					search::pvs(curEval, newBoard, depth - 1, -beta, -curEval, depth_from_start + 1, false);
 					if (curEval == SEARCH_EXPIRED) {
 						result = SEARCH_EXPIRED;
 						return;
@@ -214,7 +225,7 @@ void search::pvs(int &result, const bitboard::Position &board, int depth, int al
 		}
 
 		if (curEval > alpha) {
-			if (depthFromStart == 0)
+			if (depth_from_start == 0)
 				secondBestEval = alpha;
 			alpha = curEval;
 			topMove = moves[i];
@@ -223,7 +234,7 @@ void search::pvs(int &result, const bitboard::Position &board, int depth, int al
 			break;
 	}
 
-	if (useThreads) {
+	if (use_threads) {
 		for (size_t i = 0; i < results.size(); i++)
 			results[i].get();
 		for (size_t i = 1; i < moves.size(); i++) {
@@ -233,7 +244,7 @@ void search::pvs(int &result, const bitboard::Position &board, int depth, int al
 			}
 
 			if (data[i] > alpha) {
-				if (depthFromStart == 0)
+				if (depth_from_start == 0)
 					secondBestEval = alpha;
 				alpha = data[i];
 				topMove = moves[i];
@@ -254,17 +265,28 @@ void search::pvs(int &result, const bitboard::Position &board, int depth, int al
 		}
 	}
 
-	if (depthFromStart == 0)
+	if (depth_from_start == 0)
 		bestMove = topMove;
 
 	result = alpha;
 	
 	end:
-	if (useThreads)
+	if (use_threads)
 		delete[] data;
 }
 
-search::SearchResult search::search(bitboard::Position &board, int time_MS, int depth, bool full_search) {
+void timer_thread(int) {
+	std::string token;
+	while (true) {
+		std::cin >> token;
+		if (token == "stop") {
+			limit = 0;
+			break;
+		}
+	}
+}
+
+search::SearchResult search::search_by_time(bitboard::Position &board, int time_MS, bool full_search) {
 	// iterative deepening
 	// search with depth of one ply first
 	// then increase depth until time runs out
@@ -278,14 +300,12 @@ search::SearchResult search::search(bitboard::Position &board, int time_MS, int 
 	topMoveNull = true;
 
 	limit = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-	limit += (time_MS == -1 ? INT_MAX : time_MS);
+	limit += time_MS;
 	
-	if (time_MS != -1)
-		depth = 3;
-	bool is_mate = false;
-
+	int depth = 3;
 	bool extensionBonus = false;
 	int eval = 0, prevEval = 0, prevBestMove = 0;
+
 	while (true) {
 		nodes = 0, prevEval = eval, prevBestMove = bestMove;
 		search::pvs(eval, board, depth, INT_MIN_PLUS_1 + 2, INT_MAX - 2, 0, true);
@@ -299,7 +319,7 @@ search::SearchResult search::search(bitboard::Position &board, int time_MS, int 
 		std::cout << "info depth " << std::to_string(depth) << " nodes " << nodes << " currmove " << move::to_string(bestMove) << " score ";
 
 		// checkmate has been found, do not need to search any more
-		int isMate = eval_is_mate(eval);
+		int isMate = search::eval_is_mate(eval);
 		if (isMate != -1) {
 			std::cout << "mate ";
 			if (eval > 0) {
@@ -311,9 +331,6 @@ search::SearchResult search::search(bitboard::Position &board, int time_MS, int 
 		}
 		else
 			std::cout << "cp " << eval << "\n";
-
-		if (time_MS == -1)
-			break;
 
 		if (!full_search && prevBestMove == bestMove && eval < 900) {
 			if (depth >= 6 && (eval - secondBestEval > 150 || std::abs(eval - prevEval) < 60))
@@ -331,18 +348,64 @@ search::SearchResult search::search(bitboard::Position &board, int time_MS, int 
 		depth++;
 	}
 
-	moveNum++;
-	// https://stackoverflow.com/a/8234813
-	for (auto it = transposition.begin(); it != transposition.end();) {
-		if (it->second.moveNum >= moveNum - TT_KEEP_MOVE_COUNT)
-			transposition.erase(it++);
+	return { bestMove, depth, eval };
+}
+
+search::SearchResult search::search_by_depth(bitboard::Position &board, int depth) {
+	limit = ULLONG_MAX;
+	
+	int eval = 0;
+	search::pvs(eval, board, depth, INT_MIN_PLUS_1 + 2, INT_MAX - 2, 0, true);
+
+	std::cout << "info depth " << std::to_string(depth) << " nodes " << nodes << " currmove " << move::to_string(bestMove) << " score ";
+
+	int isMate = search::eval_is_mate(eval);
+	if (isMate != -1) {
+		std::cout << "mate ";
+		if (eval > 0)
+			std::cout << (int) ((INT_MAX - eval) / 2.0 + 0.5) << "\n";
 		else
-			it++;
+			std::cout << "-" << (int) ((eval - INT_MIN_PLUS_1 - 1) / 2.0 + 0.5) << "\n";
+	}
+	else
+		std::cout << "cp " << eval << "\n";
+
+	return { bestMove, depth, eval };
+}
+
+search::SearchResult search::search_unlimited(bitboard::Position &board) {
+	topMoveNull = true;
+
+	limit = ULLONG_MAX;
+	tp.push(timer_thread);
+	
+	int depth = 3, eval = 0;
+	while (true) {
+		search::pvs(eval, board, depth, INT_MIN_PLUS_1 + 2, INT_MAX - 2, 0, true);
+		topMoveNull = false;
+
+		if (eval == SEARCH_EXPIRED) {
+			depth--;
+			break;
+		}
+
+		std::cout << "info depth " << std::to_string(depth) << " nodes " << nodes << " currmove " << move::to_string(bestMove) << " score ";
+
+		int isMate = search::eval_is_mate(eval);
+		if (isMate != -1) {
+			std::cout << "mate ";
+			if (eval > 0)
+				std::cout << (int) ((INT_MAX - eval) / 2.0 + 0.5) << "\n";
+			else
+				std::cout << "-" << (int) ((eval - INT_MIN_PLUS_1 - 1) / 2.0 + 0.5) << "\n";
+		}
+		else
+			std::cout << "cp " << eval << "\n";
+
+		depth++;
 	}
 
-	// transposition.clear();
-
-	return { bestMove, depth + (extensionBonus ? 100 : 0), eval, is_mate };
+	return { bestMove, depth, eval };
 }
 
 int search::eval_is_mate(int eval) {
