@@ -366,26 +366,6 @@ void movegen::move_gen(const bitboard::Position &board, std::vector<int> &moves)
 					moves.push_back(NEW_MOVE(center + 1, board.enPassant, 0, 0, 1));
 			}
 		}
-
-		// if (board.mailbox[center - 1] == pawn && center % 8 > 0) {
-		// 	int move = NEW_MOVE(center - 1, board.enPassant, 0, 0, 1);
-
-		// 	bitboard::Position newBoard;
-		// 	memcpy(&newBoard, &board, sizeof(board));
-
-		// 	move::make_move(newBoard, move);
-		// 	if (!get_checks(newBoard, !newBoard.turn))
-		// 		moves.push_back(move);
-		// }
-		// if (board.mailbox[center + 1] == pawn && center % 8 < 7) {
-		// 	int move = NEW_MOVE(center + 1, board.enPassant, 0, 0, 1);
-
-		// 	bitboard::Position new_board;
-		// 	memcpy(&new_board, &board, sizeof(board));
-
-		// 	move::make_move(new_board, move);
-		// 	if (!get_checks(new_board, !new_board.turn))
-		// 		moves.push_back(move);
 	}
 
 	if (checks) {

@@ -298,6 +298,7 @@ search::SearchResult search::search_by_time(bitboard::Position &board, int time_
 	// and we can search the best move first in the deeper search
 
 	topMoveNull = true;
+	secondBestEval = INT_MIN;
 
 	limit = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 	limit += time_MS;
@@ -333,14 +334,20 @@ search::SearchResult search::search_by_time(bitboard::Position &board, int time_
 			std::cout << "cp " << eval << "\n";
 
 		if (!full_search && prevBestMove == bestMove && eval < 900) {
-			if (depth >= 6 && (eval - secondBestEval > 150 || std::abs(eval - prevEval) < 60))
+			// if everything has been pruned through move ordering
+			// the move must be very good for that to happen
+			// when this happens, secondBestEval is set to -2147483645, not INT_MIN or INT_MIN_PLUS_1???
+			// don't know why, but it works
+			if (depth >= 6 && (secondBestEval == -2147483645))
 				break;
-			if (depth >= 5 && (eval - secondBestEval > 100 && std::abs(eval - prevEval) < 60))
-				break;
-			if (depth >= 5 && eval - secondBestEval > 250)
-				break;
+			// if (depth >= 6 && (eval - secondBestEval > 150 || std::abs(eval - prevEval) < 60))
+			// 	break;
+			// if (depth >= 5 && (eval - secondBestEval > 100 && std::abs(eval - prevEval) < 60))
+			// 	break;
+			// if (depth >= 5 && eval - secondBestEval > 250)
+			// 	break;
 		}
-		if (depth >= 5 && bestMove != prevBestMove && std::abs(eval - prevEval) > 150 && !extensionBonus) {
+		if (depth >= 5 && bestMove != prevBestMove && std::abs(eval - prevEval) > 100 && !extensionBonus) {
 			extensionBonus = true;
 			limit += 1.5 * time_MS;
 		}
@@ -348,7 +355,7 @@ search::SearchResult search::search_by_time(bitboard::Position &board, int time_
 		depth++;
 	}
 
-	return { bestMove, depth, eval };
+	return { bestMove, extensionBonus ? depth + 100 : depth, eval };
 }
 
 search::SearchResult search::search_by_depth(bitboard::Position &board, int depth) {

@@ -125,7 +125,7 @@ int main() {
 					res = search::search_by_time(bitboard::board, movetime, true);
 				else if (depth != -1)
 					res = search::search_by_depth(bitboard::board, depth);
-				else if (winc != -1 && binc != -1) {
+				else if (wtime != -1 && btime != -1) {
 					int remainingTime = bitboard::board.turn ? btime : wtime;
 					int inc = bitboard::board.turn ? binc : winc;
 					if (inc == -1)
@@ -137,9 +137,8 @@ int main() {
 
 					search::table_clear();
 				}
-				else {
+				else
 					res = search::search_unlimited(bitboard::board);
-				}
 				move = res.move;
 			}
 
