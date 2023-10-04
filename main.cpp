@@ -7,6 +7,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include <cstdlib>
+
 #include "bitboard.h"
 #include "eval.h"
 #include "maps.h"
@@ -135,7 +137,7 @@ int main() {
 					time = std::max(100, time);
 					res = search::search_by_time(bitboard::board, time + (inc * 0.5), false);
 
-					search::table_clear();
+					search::table_clear_move();
 				}
 				else
 					res = search::search_unlimited(bitboard::board);
@@ -178,6 +180,8 @@ int main() {
 			bitboard::print_board(bitboard::board);
 		else if (token == "quit")
 			break;
+		else if (token == "ucinewgame")
+			search::table_clear();
 	}
 
 	return 0;

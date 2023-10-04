@@ -56,6 +56,10 @@ void table_insert(ull hash, TTResult result) {
 }
 
 void search::table_clear() {
+	moveNum = 0;
+	transposition.clear();
+}
+void search::table_clear_move() {
 	moveNum++;
 	// https://stackoverflow.com/a/8234813
 	for (auto it = transposition.begin(); it != transposition.end();) {
@@ -334,18 +338,11 @@ search::SearchResult search::search_by_time(bitboard::Position &board, int time_
 			std::cout << "cp " << eval << "\n";
 
 		if (!full_search && prevBestMove == bestMove && eval < 900) {
-			// if everything has been pruned through move ordering
+			// if everything gets pruned through move ordering
 			// the move must be very good for that to happen
-			// when this happens, secondBestEval is set to -2147483645, not INT_MIN or INT_MIN_PLUS_1???
-			// don't know why, but it works
-			if (depth >= 6 && (secondBestEval == -2147483645))
+			// when this happens, secondBestEval is set to -2147483645 (i have no idea why)
+			if (depth >= 6 && (secondBestEval == -2147483645 || eval - secondBestEval >= 200))
 				break;
-			// if (depth >= 6 && (eval - secondBestEval > 150 || std::abs(eval - prevEval) < 60))
-			// 	break;
-			// if (depth >= 5 && (eval - secondBestEval > 100 && std::abs(eval - prevEval) < 60))
-			// 	break;
-			// if (depth >= 5 && eval - secondBestEval > 250)
-			// 	break;
 		}
 		if (depth >= 5 && bestMove != prevBestMove && std::abs(eval - prevEval) > 100 && !extensionBonus) {
 			extensionBonus = true;
@@ -355,7 +352,7 @@ search::SearchResult search::search_by_time(bitboard::Position &board, int time_
 		depth++;
 	}
 
-	return { bestMove, extensionBonus ? depth + 100 : depth, eval };
+	return { bestMove, depth, eval };
 }
 
 search::SearchResult search::search_by_depth(bitboard::Position &board, int depth) {

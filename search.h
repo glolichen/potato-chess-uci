@@ -11,6 +11,7 @@ namespace search {
 	};
 
 	void table_clear();
+	void table_clear_move();
 
 	void pvs(int &result, const bitboard::Position &board, int depth, int alpha, int beta, int depth_from_start, bool use_threads);
 
