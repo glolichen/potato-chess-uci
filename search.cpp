@@ -340,15 +340,18 @@ search::SearchResult search::search_by_time(bitboard::Position &board, int time_
 		else
 			std::cout << "cp " << eval << "\n";
 
-		// std::cout << secondBestEval << "\n";
-		if (!full_search && prevBestMove == bestMove && eval < 900) {
-			// if everything gets pruned through move ordering
-			// the move must be very good for that to happen
-			// when this happens, secondBestEval is set to -2147483645 (i have no idea why)
-			if (depth >= 6 && (secondBestEval == INT_MIN || eval - secondBestEval >= 200))
+		if (!full_search && prevBestMove == bestMove) {
+			if (depth >= 6 && (secondBestEval == INT_MIN || eval - secondBestEval >= 150)) {
+				std::cout << "break at depth 6\n";
 				break;
+			}
+			if (depth >= 7 && (secondBestEval == INT_MIN || eval - secondBestEval >= 100)) {
+				std::cout << "break at depth 7\n";
+				break;
+			}
 		}
 		if (depth >= 5 && bestMove != prevBestMove && std::abs(eval - prevEval) > 100 && !extensionBonus) {
+			std::cout << "extension granted\n";
 			extensionBonus = true;
 			limit += 1.5 * time_MS;
 		}
