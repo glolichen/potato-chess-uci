@@ -143,7 +143,6 @@ void search::pvs(int &result, const bitboard::Position &board, int depth, int al
 
 	if (depth == 0) {		
 		result = quiescence(board, INT_MIN_PLUS_1, INT_MAX, QUISCENCE_DEPTH);
-		// result = eval::evaluate(board) * (board.turn ? -1 : 1);
 		return;
 	}
 
@@ -229,8 +228,10 @@ void search::pvs(int &result, const bitboard::Position &board, int depth, int al
 		}
 
 		if (curEval > alpha) {
-			if (depth_from_start == 0)
-				secondBestEval = alpha;
+			// if (depth_from_start == 0) {
+			// 	secondBestEval = alpha;
+			// 	std::cout << depth_from_start << " " << secondBestEval << " B\n";
+			// }
 			alpha = curEval;
 			topMove = moves[i];
 		}
@@ -248,8 +249,10 @@ void search::pvs(int &result, const bitboard::Position &board, int depth, int al
 			}
 
 			if (data[i] > alpha) {
-				if (depth_from_start == 0)
+				if (depth_from_start == 0) {
 					secondBestEval = alpha;
+					// std::cout << depth_from_start << " " << secondBestEval << " A\n";
+				}
 				alpha = data[i];
 				topMove = moves[i];
 			}
@@ -337,11 +340,12 @@ search::SearchResult search::search_by_time(bitboard::Position &board, int time_
 		else
 			std::cout << "cp " << eval << "\n";
 
+		// std::cout << secondBestEval << "\n";
 		if (!full_search && prevBestMove == bestMove && eval < 900) {
 			// if everything gets pruned through move ordering
 			// the move must be very good for that to happen
 			// when this happens, secondBestEval is set to -2147483645 (i have no idea why)
-			if (depth >= 6 && (secondBestEval == -2147483645 || eval - secondBestEval >= 200))
+			if (depth >= 6 && (secondBestEval == INT_MIN || eval - secondBestEval >= 200))
 				break;
 		}
 		if (depth >= 5 && bestMove != prevBestMove && std::abs(eval - prevEval) > 100 && !extensionBonus) {
