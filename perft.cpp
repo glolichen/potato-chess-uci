@@ -16,7 +16,7 @@
 
 std::atomic<ull> answer;
 
-perft::PerftResult perft::test(bitboard::Position &board, int depth) {
+perft::PerftResult perft::test(const bitboard::Position &board, int depth) {
 	ull start = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 	perft::perft_atomic_first(board, depth);
 	ull end = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
