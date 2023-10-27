@@ -7,18 +7,18 @@
 
 namespace search {
 	struct SearchResult {
-		int move, depth, eval;
+		int move, ponder, depth, eval;
 	};
 
 	void table_clear();
 	void table_clear_move();
 
-	void pvs(int &result, const bitboard::Position &board, int depth, int alpha, int beta, int depth_from_start, bool use_threads);
+	void pvs(int &result, const bitboard::Position &board, int depth, int alpha, int beta, int last_move, int depth_from_start, bool use_threads);
 
-	SearchResult search_by_time(bitboard::Position &board, int time_MS, bool full_search);
-	SearchResult search_by_depth(bitboard::Position &board, int depth);
-	SearchResult search_unlimited(bitboard::Position &board);
-
+	SearchResult search_by_time(const bitboard::Position &board, int time_MS, bool full_search);
+	SearchResult search_by_depth(const bitboard::Position &board, int depth);
+	SearchResult search_unlimited(const bitboard::Position &board);
+	
 	int eval_is_mate(int eval);
 }
 
