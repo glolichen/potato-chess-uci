@@ -1,5 +1,4 @@
 #include <chrono>
-#include <cstring>
 #include <iostream>
 #include <limits.h>
 #include <unordered_map>
@@ -41,13 +40,14 @@ struct TTResult {
 ctpl::thread_pool tp(THREAD_COUNT);
 
 bool topMoveNull;
-int bestMove;
-int secondBestEval;
+int bestMove, secondBestEval;
 
 int moveNum = 0;
 
 std::mutex mx;
 std::unordered_map<ull, TTResult> transposition;
+
+std::unordered_map<int, int> opponentResponses;
 
 void table_insert(ull hash, TTResult result) {
 	mx.lock();
@@ -100,7 +100,7 @@ int quiescence(const bitboard::Position &board, int alpha, int beta, int depth) 
 			continue;
 
 		bitboard::Position newBoard;
-		memcpy(&newBoard, &board, sizeof(board));
+		bitboard::copy_board(newBoard, board);
 		move::make_move(newBoard, move);
 
 		int score = quiescence(newBoard, -beta, -alpha, depth - 1);
@@ -116,7 +116,7 @@ int quiescence(const bitboard::Position &board, int alpha, int beta, int depth) 
 	return alpha;
 }
 
-void search::pvs(int &result, const bitboard::Position &board, int depth, int alpha, int beta, int depth_from_start, bool use_threads) {
+void search::pvs(int &result, const bitboard::Position &board, int depth, int alpha, int beta, int last_move, int depth_from_start, bool use_threads) {
 	nodes++;
 	if ((nodes & (NODES_PER_TIME_CHECK - 1)) == (NODES_PER_TIME_CHECK - 1) && is_time_up()) {
 		result = SEARCH_EXPIRED;
@@ -180,17 +180,19 @@ void search::pvs(int &result, const bitboard::Position &board, int depth, int al
 
 	int topMove = moves[0];
 	for (size_t i = 0; i < moves.size(); i++) {
+		int curMove = moves[i];
+
 		bitboard::Position newBoard;
-		memcpy(&newBoard, &board, sizeof(board));
-		if (board.mailbox[DEST(moves[i])] != -1 || board.mailbox[SOURCE(moves[i])] == PAWN || board.mailbox[SOURCE(moves[i])] == PAWN + 6)
+		bitboard::copy_board(newBoard, board);
+		if (board.mailbox[DEST(curMove)] != -1 || board.mailbox[SOURCE(curMove)] == PAWN || board.mailbox[SOURCE(curMove)] == PAWN + 6)
 			newBoard.fiftyMoveClock = 0;
 		else
 			newBoard.fiftyMoveClock++;
-		move::make_move(newBoard, moves[i]);
+		move::make_move(newBoard, curMove);
 		
 		int curEval;
 		if (i == 0) {
-			search::pvs(curEval, newBoard, depth - 1, -beta, -alpha, depth_from_start + 1, use_threads);
+			search::pvs(curEval, newBoard, depth - 1, -beta, -alpha, curMove, depth_from_start + 1, use_threads);
 			if (curEval == SEARCH_EXPIRED) {
 				result = SEARCH_EXPIRED;
 				goto end;
@@ -199,25 +201,25 @@ void search::pvs(int &result, const bitboard::Position &board, int depth, int al
 		}
 		else {
 			if (use_threads) {
-				results.push_back(tp.push([&data, i, newBoard, depth, alpha, beta, depth_from_start](int) {
-					search::pvs(data[i], newBoard, depth - 1, -alpha - 1, -alpha, depth_from_start + 1, false);
+				results.push_back(tp.push([&data, i, newBoard, depth, alpha, beta, curMove, depth_from_start](int) {
+					search::pvs(data[i], newBoard, depth - 1, -alpha - 1, -alpha, curMove, depth_from_start + 1, false);
 					data[i] *= -1;
 					if (data[i] > alpha) {
-						search::pvs(data[i], newBoard, depth - 1, -beta, -data[i], depth_from_start + 1, false);
+						search::pvs(data[i], newBoard, depth - 1, -beta, -data[i], curMove, depth_from_start + 1, false);
 						data[i] *= -1;
 					}
 				}));
 				continue;
 			}
 			else {
-				search::pvs(curEval, newBoard, depth - 1, -alpha - 1, -alpha, depth_from_start + 1, false);
+				search::pvs(curEval, newBoard, depth - 1, -alpha - 1, -alpha, curMove, depth_from_start + 1, false);
 				if (curEval == SEARCH_EXPIRED) {
 					result = SEARCH_EXPIRED;
 					return;
 				}
 				curEval *= -1;
 				if (curEval > alpha) {
-					search::pvs(curEval, newBoard, depth - 1, -beta, -curEval, depth_from_start + 1, false);
+					search::pvs(curEval, newBoard, depth - 1, -beta, -curEval, curMove, depth_from_start + 1, false);
 					if (curEval == SEARCH_EXPIRED) {
 						result = SEARCH_EXPIRED;
 						return;
@@ -228,12 +230,8 @@ void search::pvs(int &result, const bitboard::Position &board, int depth, int al
 		}
 
 		if (curEval > alpha) {
-			// if (depth_from_start == 0) {
-			// 	secondBestEval = alpha;
-			// 	std::cout << depth_from_start << " " << secondBestEval << " B\n";
-			// }
 			alpha = curEval;
-			topMove = moves[i];
+			topMove = curMove;
 		}
 		if (alpha >= beta)
 			break;
@@ -249,10 +247,8 @@ void search::pvs(int &result, const bitboard::Position &board, int depth, int al
 			}
 
 			if (data[i] > alpha) {
-				if (depth_from_start == 0) {
+				if (depth_from_start == 0)
 					secondBestEval = alpha;
-					// std::cout << depth_from_start << " " << secondBestEval << " A\n";
-				}
 				alpha = data[i];
 				topMove = moves[i];
 			}
@@ -274,6 +270,11 @@ void search::pvs(int &result, const bitboard::Position &board, int depth, int al
 
 	if (depth_from_start == 0)
 		bestMove = topMove;
+	if (depth_from_start == 1) {
+		// bitboard::print_board(board);
+		// std::cout << depth << " " << move::to_string(last_move) << " " << move::to_string(topMove) << "\n";
+		opponentResponses.insert({ last_move, topMove });
+	}
 
 	result = alpha;
 	
@@ -282,7 +283,7 @@ void search::pvs(int &result, const bitboard::Position &board, int depth, int al
 		delete[] data;
 }
 
-void timer_thread(int) {
+void manual_stop_thread(int) {
 	std::string token;
 	while (true) {
 		std::cin >> token;
@@ -293,7 +294,18 @@ void timer_thread(int) {
 	}
 }
 
-search::SearchResult search::search_by_time(bitboard::Position &board, int time_MS, bool full_search) {
+void ponder_stop_thread(int) {
+	std::string token;
+	while (true) {
+		std::cin >> token;
+		if (token == "stop") {
+			limit = 0;
+			break;
+		}
+	}
+}
+
+search::SearchResult search::search_by_time(const bitboard::Position &board, int time_MS, bool full_search) {
 	// iterative deepening
 	// search with depth of one ply first
 	// then increase depth until time runs out
@@ -306,6 +318,7 @@ search::SearchResult search::search_by_time(bitboard::Position &board, int time_
 
 	topMoveNull = true;
 	secondBestEval = INT_MIN;
+	opponentResponses.clear();
 
 	limit = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 	limit += time_MS;
@@ -316,7 +329,7 @@ search::SearchResult search::search_by_time(bitboard::Position &board, int time_
 
 	while (true) {
 		nodes = 0, prevEval = eval, prevBestMove = bestMove;
-		search::pvs(eval, board, depth, INT_MIN_PLUS_1 + 2, INT_MAX - 2, 0, true);
+		search::pvs(eval, board, depth, INT_MIN_PLUS_1 + 2, INT_MAX - 2, -1, 0, true);
 		topMoveNull = false;
 
 		if (eval == SEARCH_EXPIRED) {
@@ -340,7 +353,7 @@ search::SearchResult search::search_by_time(bitboard::Position &board, int time_
 		else
 			std::cout << "cp " << eval << "\n";
 
-		if (!full_search && prevBestMove == bestMove) {
+		if (!full_search && !extensionBonus && prevBestMove == bestMove) {
 			if (depth >= 6 && (secondBestEval == INT_MIN || eval - secondBestEval >= 150)) {
 				std::cout << "break at depth 6\n";
 				break;
@@ -350,7 +363,7 @@ search::SearchResult search::search_by_time(bitboard::Position &board, int time_
 				break;
 			}
 		}
-		if (depth >= 5 && bestMove != prevBestMove && std::abs(eval - prevEval) > 100 && !extensionBonus) {
+		if (depth >= 5 && bestMove != prevBestMove && std::abs(eval - prevEval) > 150 && !extensionBonus) {
 			std::cout << "extension granted\n";
 			extensionBonus = true;
 			limit += 1.5 * time_MS;
@@ -359,14 +372,15 @@ search::SearchResult search::search_by_time(bitboard::Position &board, int time_
 		depth++;
 	}
 
-	return { bestMove, depth, eval };
+	return { bestMove, opponentResponses[bestMove], depth, eval };
 }
 
-search::SearchResult search::search_by_depth(bitboard::Position &board, int depth) {
+search::SearchResult search::search_by_depth(const bitboard::Position &board, int depth) {
+	opponentResponses.clear();
 	limit = ULLONG_MAX;
 	
 	int eval = 0;
-	search::pvs(eval, board, depth, INT_MIN_PLUS_1 + 2, INT_MAX - 2, 0, true);
+	search::pvs(eval, board, depth, INT_MIN_PLUS_1 + 2, INT_MAX - 2, -1, 0, true);
 
 	std::cout << "info depth " << std::to_string(depth) << " nodes " << nodes << " currmove " << move::to_string(bestMove) << " score ";
 
@@ -381,18 +395,19 @@ search::SearchResult search::search_by_depth(bitboard::Position &board, int dept
 	else
 		std::cout << "cp " << eval << "\n";
 
-	return { bestMove, depth, eval };
+	return { bestMove, opponentResponses[bestMove], depth, eval };
 }
 
-search::SearchResult search::search_unlimited(bitboard::Position &board) {
+search::SearchResult search::search_unlimited(const bitboard::Position &board) {
+	opponentResponses.clear();
 	topMoveNull = true;
 
 	limit = ULLONG_MAX;
-	tp.push(timer_thread);
+	tp.push(manual_stop_thread);
 	
 	int depth = 3, eval = 0;
 	while (true) {
-		search::pvs(eval, board, depth, INT_MIN_PLUS_1 + 2, INT_MAX - 2, 0, true);
+		search::pvs(eval, board, depth, INT_MIN_PLUS_1 + 2, INT_MAX - 2, -1, 0, true);
 		topMoveNull = false;
 
 		if (eval == SEARCH_EXPIRED) {
@@ -416,7 +431,7 @@ search::SearchResult search::search_unlimited(bitboard::Position &board) {
 		depth++;
 	}
 
-	return { bestMove, depth, eval };
+	return { bestMove, opponentResponses[bestMove], depth, eval };
 }
 
 int search::eval_is_mate(int eval) {
