@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <cstring>
 #include <vector>
 
 #include "bitboard.h"
@@ -174,6 +175,10 @@ std::string bitboard::encode(const bitboard::Position &board) {
 	fen += " " + std::to_string(board.fullMove);
 
 	return fen;
+}
+
+void bitboard::copy_board(bitboard::Position &dest, const bitboard::Position &source) {
+	memcpy(&dest, &source, sizeof(Position));
 }
 
 void bitboard::print_board(const bitboard::Position &board) {

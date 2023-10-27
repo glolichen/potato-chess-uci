@@ -46,10 +46,12 @@ namespace bitboard {
 
 	extern std::unordered_set<ull> prevPositions;
 
-	std::vector<std::string> split(std::string str, char splitOn);
+	std::vector<std::string> split(const std::string str, char splitOn);
 
 	void decode(std::string fen);
 	std::string encode(const Position &board);
+
+	void copy_board(Position &dest, const Position &source);
 
 	void print_board(const Position &board);
 }
