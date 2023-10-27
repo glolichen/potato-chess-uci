@@ -22,8 +22,8 @@ namespace move {
 	};
 
 	std::string to_string(int move);
-	int uci_to_move(bitboard::Position &board, std::string uci);
-	int uci_to_move(bitboard::Position &board, int from, int dest, int promote);
+	int uci_to_move(const bitboard::Position &board, std::string uci);
+	int uci_to_move(const bitboard::Position &board, int from, int dest, int promote);
 
 	void make_move(bitboard::Position &board, int move);
 }

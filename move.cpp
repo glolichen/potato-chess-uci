@@ -20,7 +20,7 @@ std::string move::to_string(int move) {
 
 	return ss.str();
 }
-int move::uci_to_move(bitboard::Position &board, std::string uci) {
+int move::uci_to_move(const bitboard::Position &board, std::string uci) {
 	int from = (uci[1] - '0' - 1) * 8 + (7 - (uci[0] - 'a'));
 	int dest = (uci[3] - '0' - 1) * 8 + (7 - (uci[2] - 'a'));
 
@@ -28,7 +28,7 @@ int move::uci_to_move(bitboard::Position &board, std::string uci) {
 	return move::uci_to_move(board, from, dest, promote);
 }
 
-int move::uci_to_move(bitboard::Position &board, int from, int dest, int promote) {
+int move::uci_to_move(const bitboard::Position &board, int from, int dest, int promote) {
 	if (promote != 0) {
 		switch (promote) {
 			case 'q':

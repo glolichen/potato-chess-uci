@@ -254,7 +254,7 @@ const int POLYGLOT_SQUARES[64][2] = {
 	{7, 7}, {6, 7}, {5, 7}, {4, 7}, {3, 7}, {2, 7}, {1, 7}, {0, 7},
 };
 
-ull book::gen_polyglot_key(bitboard::Position &board) {
+ull book::gen_polyglot_key(const bitboard::Position &board) {
 	ull pieces = 0;
 	for (int i = 0; i < 64; i++) {
 		if (board.mailbox[i] == -1)
@@ -284,7 +284,7 @@ ull book::gen_polyglot_key(bitboard::Position &board) {
 	return pieces ^ castle ^ enpassant ^ turn;
 }
 
-int convert_polyglot_move(bitboard::Position &board, int move) {
+int convert_polyglot_move(const bitboard::Position &board, int move) {
 	int destFile = (move & 0b111);
 	int destRow = (move & 0b111000) >> 3;
 	int fromFile = (move & 0b111000000) >> 6;
@@ -444,7 +444,7 @@ static int find_pos(ull key) {
 	return (entry->key == key) ? left : BookSize;
 }
 
-int book::book_move(bitboard::Position &board) {
+int book::book_move(const bitboard::Position &board) {
 	ull key = book::gen_polyglot_key(board);
 
 	int best_move, best_score, move, score;
