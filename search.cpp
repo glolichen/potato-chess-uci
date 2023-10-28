@@ -361,13 +361,7 @@ search::SearchResult search::search_by_time(const bitboard::Position &board, int
 		depth++;
 	}
 
-	ull endTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-
-	// sometimes the move gets sent too fast, and the bot api interface does not to pick up the move
-	if (endTime - startTime < 10)
-		std::this_thread::sleep_for(std::chrono::milliseconds(10 - (endTime - startTime)));
-
-	return { bestMove, opponentResponses[bestMove], depth, eval };
+	return { bestMove, eval_is_mate(eval) == -1 ? opponentResponses[bestMove] : -1, depth, eval };
 }
 
 search::SearchResult search::search_by_depth(const bitboard::Position &board, int depth) {
@@ -469,7 +463,7 @@ search::SearchResult search::ponder(const bitboard::Position &board, int time_MS
 	
 	int depth = 3;
 	bool extensionBonus = false;
-	int eval = 0, prevEval = 0, prevBestMove = 0;
+	int eval = 0, prevBestMove = 0;
 
 	while (true) {
 		search::pvs(eval, board, depth, INT_MIN_PLUS_1 + 2, INT_MAX - 2, -1, 0, true);
@@ -504,18 +498,13 @@ search::SearchResult search::ponder(const bitboard::Position &board, int time_MS
 					break;
 				}
 			}
-			if (depth >= 5 && bestMove != prevBestMove && std::abs(eval - prevEval) > 150 && !extensionBonus) {
-				std::cout << "extension granted in search::ponder\n";
-				extensionBonus = true;
-				limit += 1.5 * time_MS;
-			}
 		}
 
 		depth++;
 	}
 
 	if (ponderHit)
-		return { bestMove, opponentResponses[bestMove], depth, eval };
+		return { bestMove, eval_is_mate(eval) == -1 ? opponentResponses[bestMove] : -1, depth, eval };
 	return { -1, -1, -1, -1 };
 }
 

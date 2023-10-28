@@ -164,11 +164,14 @@ int main() {
 			lastResult = result;
 
 			std::cout << "bestmove " << move::to_string(bestMove);
-			if (ponderMove != 0) {
+			if (ponderMove != -1 && ponderMove != 0) {
 				std::cout << " ponder " << move::to_string(ponderMove) << "\n";
+				std::cout << "pondering " << move::to_string(ponderMove) << "\n";
 				move::make_move(bitboard::board, bestMove);
 				move::make_move(bitboard::board, ponderMove);
 			}
+			else
+				std::cout << "\n";
 		}
 		else if (token == "setoption") {
 			std::string optionName;
