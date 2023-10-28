@@ -8,7 +8,8 @@ UCI compatible chess engine. Also available as a [lichess bot](https://lichess.o
  * Quiscence search
  * Transposition table w/ Zobrist Hashing
  * Polyglot opening book support
- * Multithreaded perft (and search soon)
+ * Multithreaded perft and search
+ * Pondering
 
 ## Acknowledgements
  * The [lichess bot developers](https://github.com/lichess-bot-devs), for their project [lichess-bot](https://github.com/lichess-bot-devs/lichess-bot) that made the lichess bot possible
