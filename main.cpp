@@ -28,15 +28,21 @@ int main() {
 	hash::init();
 
 	book::book_open("/home/jayden/Desktop/Programs/potato-chess/potato-chess-uci/books/Book.bin");
-
+	
 	std::unordered_map<std::string, int> options;
 	int totalHalfMoves = 0;
+
+	search::SearchResult lastResult = { -1, -1, -1, -1 };
 
 	while (true) {
 		skip:
 		
 		std::string line;
 		getline(std::cin, line);
+
+		// std::cout << line << "\n";
+		// if (line == "")
+		// 	continue;
 
 		std::stringstream ss(line);
 		
@@ -79,7 +85,8 @@ int main() {
 				}
 			}
 		}
-		else if (token == "go") {			
+		else if (token == "go") {
+			bool ponder = false;
 			int wtime = -1, btime = -1, winc = -1, binc = -1, movetime = -1, depth = -1;
 			while (ss >> token) {
 				if (token == "wtime")
@@ -103,30 +110,40 @@ int main() {
 				}
 				else if (token == "depth")
 					ss >> depth;
-				else if (token == "ponder") {
-					std::cout << "asked to ponder, what to do?\n";
+				else if (token == "ponder")
+					ponder = true;
+			}
+
+			search::SearchResult result;
+
+			if (ponder) {
+				int remainingTime = !bitboard::board.turn ? btime : wtime;
+				int inc = !bitboard::board.turn ? binc : winc;
+				if (inc == -1)
+					inc = 0;
+
+				int time = timeman::calc_base_time(remainingTime, totalHalfMoves / 2) - options["Move Overhead"];
+				time = std::max(100, time);
+				result = search::ponder(bitboard::board, time);
+
+				// std::cout << result.move << "\n";
+				if (result.move == -1) {
+					std::cout << "bestmove " << move::to_string(lastResult.move);
+					std::cout << " ponder " << move::to_string(lastResult.ponder) << "\n";
+					goto skip;
 				}
 			}
-
-			int bookMove = book::book_move(bitboard::board);
-			if (bookMove != -1) {
-				std::cout << "bestmove " << move::to_string(bookMove) << "\n";
-				continue;
-			}
-
-			std::vector<int> moves;
-			movegen::move_gen(bitboard::board, moves);
-
-			search::SearchResult res;
-			int move;
-			
-			if (moves.size() == 1)
-				move = moves[0];
 			else {
+				int bookMove = book::book_move(bitboard::board);
+				if (bookMove != -1) {
+					std::cout << "bestmove " << move::to_string(bookMove) << "\n";
+					continue;
+				}
+				
 				if (movetime != -1)
-					res = search::search_by_time(bitboard::board, movetime, true);
+					result = search::search_by_time(bitboard::board, movetime, true);
 				else if (depth != -1)
-					res = search::search_by_depth(bitboard::board, depth);
+					result = search::search_by_depth(bitboard::board, depth);
 				else if (wtime != -1 && btime != -1) {
 					int remainingTime = bitboard::board.turn ? btime : wtime;
 					int inc = bitboard::board.turn ? binc : winc;
@@ -135,17 +152,23 @@ int main() {
 
 					int time = timeman::calc_base_time(remainingTime, totalHalfMoves / 2) - options["Move Overhead"];
 					time = std::max(100, time);
-					res = search::search_by_time(bitboard::board, time + (inc * 0.5), false);
+					result = search::search_by_time(bitboard::board, time + (inc * 0.5), false);
 
 					search::table_clear_move();
 				}
 				else
-					res = search::search_unlimited(bitboard::board);
-				move = res.move;
+					result = search::search_unlimited(bitboard::board);
 			}
+			int bestMove = result.move, ponderMove = result.ponder;
 
-			std::cout << "bestmove ";
-			std::cout << move::to_string(move) << "\n";
+			lastResult = result;
+
+			std::cout << "bestmove " << move::to_string(bestMove);
+			if (ponderMove != 0) {
+				std::cout << " ponder " << move::to_string(ponderMove) << "\n";
+				move::make_move(bitboard::board, bestMove);
+				move::make_move(bitboard::board, ponderMove);
+			}
 		}
 		else if (token == "setoption") {
 			std::string optionName;

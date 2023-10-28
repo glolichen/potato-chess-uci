@@ -18,6 +18,9 @@ namespace search {
 	SearchResult search_by_time(const bitboard::Position &board, int time_MS, bool full_search);
 	SearchResult search_by_depth(const bitboard::Position &board, int depth);
 	SearchResult search_unlimited(const bitboard::Position &board);
+
+	// time_MS = the time to keep searching after opponent makes move
+	SearchResult ponder(const bitboard::Position &board, int time_MS);
 	
 	int eval_is_mate(int eval);
 }

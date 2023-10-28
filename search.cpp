@@ -294,17 +294,6 @@ void manual_stop_thread(int) {
 	}
 }
 
-void ponder_stop_thread(int) {
-	std::string token;
-	while (true) {
-		std::cin >> token;
-		if (token == "stop") {
-			limit = 0;
-			break;
-		}
-	}
-}
-
 search::SearchResult search::search_by_time(const bitboard::Position &board, int time_MS, bool full_search) {
 	// iterative deepening
 	// search with depth of one ply first
@@ -320,8 +309,8 @@ search::SearchResult search::search_by_time(const bitboard::Position &board, int
 	secondBestEval = INT_MIN;
 	opponentResponses.clear();
 
-	limit = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-	limit += time_MS;
+	ull startTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+	limit = startTime + time_MS;
 	
 	int depth = 3;
 	bool extensionBonus = false;
@@ -354,23 +343,29 @@ search::SearchResult search::search_by_time(const bitboard::Position &board, int
 			std::cout << "cp " << eval << "\n";
 
 		if (!full_search && !extensionBonus && prevBestMove == bestMove) {
-			if (depth >= 6 && (secondBestEval == INT_MIN || eval - secondBestEval >= 150)) {
-				std::cout << "break at depth 6\n";
+			if (depth >= 7 && (secondBestEval == INT_MIN || eval - secondBestEval >= 100)) {
+				std::cout << "break at depth 7 in search::search_by_time\n";
 				break;
 			}
-			if (depth >= 7 && (secondBestEval == INT_MIN || eval - secondBestEval >= 100)) {
-				std::cout << "break at depth 7\n";
+			if (depth >= 6 && (secondBestEval == INT_MIN || eval - secondBestEval >= 150)) {
+				std::cout << "break at depth 6 in search::search_by_time\n";
 				break;
 			}
 		}
 		if (depth >= 5 && bestMove != prevBestMove && std::abs(eval - prevEval) > 150 && !extensionBonus) {
-			std::cout << "extension granted\n";
+			std::cout << "extension granted in search::search_by_time\n";
 			extensionBonus = true;
 			limit += 1.5 * time_MS;
 		}
 
 		depth++;
 	}
+
+	ull endTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+
+	// sometimes the move gets sent too fast, and the bot api interface does not to pick up the move
+	if (endTime - startTime < 10)
+		std::this_thread::sleep_for(std::chrono::milliseconds(10 - (endTime - startTime)));
 
 	return { bestMove, opponentResponses[bestMove], depth, eval };
 }
@@ -432,6 +427,96 @@ search::SearchResult search::search_unlimited(const bitboard::Position &board) {
 	}
 
 	return { bestMove, opponentResponses[bestMove], depth, eval };
+}
+
+bool isPondering = false, ponderHit = false;
+int ponderAfterTime = -1;
+void ponder_stop_thread(int) {
+	std::string line;
+	while (true) {
+		std::cin >> line;
+		// std::cout << line << "\n";
+		if (line == "ponderhit") {
+			std::cout << "ponderhit\n";
+			isPondering = false, ponderHit = true;
+			limit = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+			limit += ponderAfterTime;
+			break;
+		}
+		if (line == "stop") {
+			// since we have just consumed the last line with getline,
+			// and it is not ponderhit, we will need the input again in the main loop
+			// so we will put the new line back into stdin, along with all the characters
+			// this needs to be done in reverse order because putback adds to the back
+			// std::cin.putback('\n');
+			// for (int i = line.size() - 1; i >= 0; i--)
+			// 	std::cin.putback(line[i]);
+			std::cout << "not ponderhit\n";
+			limit = 0;
+			break;
+		}
+	}
+}
+search::SearchResult search::ponder(const bitboard::Position &board, int time_MS) {
+	opponentResponses.clear();
+	topMoveNull = true;
+
+	isPondering = true, ponderHit = false;
+	ponderAfterTime = time_MS;
+
+	limit = ULLONG_MAX;
+	tp.push(ponder_stop_thread);
+	
+	int depth = 3;
+	bool extensionBonus = false;
+	int eval = 0, prevEval = 0, prevBestMove = 0;
+
+	while (true) {
+		search::pvs(eval, board, depth, INT_MIN_PLUS_1 + 2, INT_MAX - 2, -1, 0, true);
+		topMoveNull = false;
+
+		if (eval == SEARCH_EXPIRED) {
+			depth--;
+			break;
+		}
+
+		std::cout << "info depth " << std::to_string(depth) << " nodes " << nodes << " currmove " << move::to_string(bestMove) << " score ";
+
+		int isMate = search::eval_is_mate(eval);
+		if (isMate != -1) {
+			std::cout << "mate ";
+			if (eval > 0)
+				std::cout << (int) ((INT_MAX - eval) / 2.0 + 0.5) << "\n";
+			else
+				std::cout << "-" << (int) ((eval - INT_MIN_PLUS_1 - 1) / 2.0 + 0.5) << "\n";
+		}
+		else
+			std::cout << "cp " << eval << "\n";
+
+		if (!isPondering) {
+			if (!extensionBonus && prevBestMove == bestMove) {
+				if (depth >= 7 && (secondBestEval == INT_MIN || eval - secondBestEval >= 100)) {
+					std::cout << "break at depth 7 in search::ponder\n";
+					break;
+				}
+				if (depth >= 6 && (secondBestEval == INT_MIN || eval - secondBestEval >= 150)) {
+					std::cout << "break at depth 6 in search::ponder\n";
+					break;
+				}
+			}
+			if (depth >= 5 && bestMove != prevBestMove && std::abs(eval - prevEval) > 150 && !extensionBonus) {
+				std::cout << "extension granted in search::ponder\n";
+				extensionBonus = true;
+				limit += 1.5 * time_MS;
+			}
+		}
+
+		depth++;
+	}
+
+	if (ponderHit)
+		return { bestMove, opponentResponses[bestMove], depth, eval };
+	return { -1, -1, -1, -1 };
 }
 
 int search::eval_is_mate(int eval) {
