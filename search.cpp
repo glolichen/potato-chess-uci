@@ -423,7 +423,7 @@ search::SearchResult search::search_unlimited(const bitboard::Position &board) {
 	return { bestMove, opponentResponses[bestMove], depth, eval };
 }
 
-bool isPondering = false, ponderHit = false;
+bool isPondering = false, ponderHit = false, willTerminate = false;
 int ponderAfterTime = -1;
 void ponder_stop_thread(int) {
 	std::string line;
@@ -434,7 +434,8 @@ void ponder_stop_thread(int) {
 			std::cout << "ponderhit\n";
 			isPondering = false, ponderHit = true;
 			limit = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-			limit += ponderAfterTime;
+			if (!willTerminate)
+				limit += ponderAfterTime;
 			break;
 		}
 		if (line == "stop") {
@@ -455,7 +456,7 @@ search::SearchResult search::ponder(const bitboard::Position &board, int time_MS
 	opponentResponses.clear();
 	topMoveNull = true;
 
-	isPondering = true, ponderHit = false;
+	isPondering = false, ponderHit = false, willTerminate = false;
 	ponderAfterTime = time_MS;
 
 	limit = ULLONG_MAX;
@@ -487,16 +488,18 @@ search::SearchResult search::ponder(const bitboard::Position &board, int time_MS
 		else
 			std::cout << "cp " << eval << "\n";
 
-		if (!isPondering) {
-			if (!extensionBonus && prevBestMove == bestMove) {
-				if (depth >= 7 && (secondBestEval == INT_MIN || eval - secondBestEval >= 100)) {
-					std::cout << "break at depth 7 in search::ponder\n";
+		if (!extensionBonus && prevBestMove == bestMove) {
+			if (depth >= 7 && (secondBestEval == INT_MIN || eval - secondBestEval >= 100)) {
+				std::cout << "break at depth 7 in search::ponder\n";
+				if (!isPondering)
 					break;
-				}
-				if (depth >= 6 && (secondBestEval == INT_MIN || eval - secondBestEval >= 150)) {
-					std::cout << "break at depth 6 in search::ponder\n";
+				willTerminate = true;
+			}
+			if (depth >= 6 && (secondBestEval == INT_MIN || eval - secondBestEval >= 150)) {
+				std::cout << "break at depth 6 in search::ponder\n";
+				if (!isPondering)
 					break;
-				}
+				willTerminate = true;
 			}
 		}
 
