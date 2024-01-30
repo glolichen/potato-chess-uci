@@ -40,8 +40,7 @@ void perft::perft_atomic_first(const bitboard::Position &board, int depth) {
 
 	std::vector<std::thread> threads;
 	for (const int &move : moves) {
-		bitboard::Position newBoard;
-		memcpy(&newBoard, &board, sizeof(board));
+		bitboard::Position newBoard(board);
 		move::make_move(newBoard, move);
 
 		threads.push_back(std::thread(perft::perft_atomic, newBoard, depth - 1, move));
@@ -65,8 +64,7 @@ void perft::perft_atomic(const bitboard::Position &board, int depth, int prevMov
 
 	ull positions = 0;
 	for (const int &move : moves) {
-		bitboard::Position newBoard;
-		memcpy(&newBoard, &board, sizeof(board));
+		bitboard::Position newBoard(board);
 		move::make_move(newBoard, move);
 		positions += perft::perft(newBoard, depth - 1);
 	}
@@ -87,8 +85,7 @@ ull perft::perft(const bitboard::Position &board, int depth) {
 	ull positions = 0;
 
 	for (const int &move : moves) {
-		bitboard::Position newBoard;
-		memcpy(&newBoard, &board, sizeof(board));
+		bitboard::Position newBoard(board);
 		move::make_move(newBoard, move);
 		positions += perft::perft(newBoard, depth - 1);
 	}

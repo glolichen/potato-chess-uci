@@ -16,10 +16,9 @@ std::string bitboard::squares[64] = {
 	"h8", "g8", "f8", "e8", "d8", "c8", "b8", "a8",
 };
 std::string bitboard::pieces = "PNBRQKpnbrqk";
-bitboard::Position bitboard::board;
 std::unordered_set<ull> bitboard::prevPositions;
 
-std::vector<std::string> bitboard::split(std::string str, char split_on) {
+std::vector<std::string> split(std::string str, char split_on) {
 	std::vector<std::string> result;
 
 	int left = 0;
@@ -34,56 +33,56 @@ std::vector<std::string> bitboard::split(std::string str, char split_on) {
 	return result;
 }
 
-void bitboard::decode(std::string fen) {
+void bitboard::Position::decode(std::string fen) {
 	for (int i = 0; i < 64; i++)
-		board.mailbox[i] = -1;
-	board.allPieces = 0ull;
+		this->mailbox[i] = -1;
+	this->allPieces = 0ull;
 	for (int i = 0; i < 2; i++) {
 		for (int j = 0; j < 7; j++)
-			board.pieces[i][j] = 0ull;
+			this->pieces[i][j] = 0ull;
 	}
 	for (int i = 0; i < 4; i++)
-		board.castle[i] = false;
-	board.turn = 0;
-	board.enPassant = -1;
-	board.fiftyMoveClock = 0;
-	board.fullMove = 0;
+		this->castle[i] = false;
+	this->turn = 0;
+	this->enPassant = -1;
+	this->fiftyMoveClock = 0;
+	this->fullMove = 0;
 
-	std::vector<std::string> splitted = bitboard::split(fen, ' ');
+	std::vector<std::string> splitted = split(fen, ' ');
 
 	if (!splitted[1].compare("w"))
-		board.turn = WHITE;
+		this->turn = WHITE;
 	else
-		board.turn = BLACK;
+		this->turn = BLACK;
 
 	try {
-		board.fiftyMoveClock = stoi(splitted[4]);
-		board.fullMove = stoi(splitted[5]);
+		this->fiftyMoveClock = stoi(splitted[4]);
+		this->fullMove = stoi(splitted[5]);
 	}
 	catch (...) { }
 
 
 	std::string castle = splitted[2];
 	if (castle.find('K') != std::string::npos)
-		board.castle[WHITE_SHORT] = true;
+		this->castle[WHITE_SHORT] = true;
 	if (castle.find('Q') != std::string::npos)
-		board.castle[WHITE_LONG] = true;
+		this->castle[WHITE_LONG] = true;
 	if (castle.find('k') != std::string::npos)
-		board.castle[BLACK_SHORT] = true;
+		this->castle[BLACK_SHORT] = true;
 	if (castle.find('q') != std::string::npos)
-		board.castle[BLACK_LONG] = true;
+		this->castle[BLACK_LONG] = true;
 
 	std::string ep = splitted[3];
 	if (ep.compare("-")) {
 		for (int i = 0; i < 64; i++) {
 			if (ep == squares[i]) {
-				board.enPassant = i;
+				this->enPassant = i;
 				break;
 			}
 		}
 	}
 	else
-		board.enPassant = -1;
+		this->enPassant = -1;
 
 	std::vector<std::string> line = split(splitted[0], '/');
 
@@ -96,42 +95,64 @@ void bitboard::decode(std::string fen) {
 				continue;
 			}
 
-			SET1(board.allPieces, 63 - (i * 8 + cur));
+			SET1(this->allPieces, 63 - (i * 8 + cur));
 
 			int piece = bitboard::pieces.find(cur_rank[j]);
-			board.mailbox[63 - (i * 8 + cur)] = piece;
+			this->mailbox[63 - (i * 8 + cur)] = piece;
 			if (piece >= 6)
-				SET1(board.pieces[BLACK][piece - 6], 63 - (i * 8 + cur));
+				SET1(this->pieces[BLACK][piece - 6], 63 - (i * 8 + cur));
 			else
-				SET1(board.pieces[WHITE][piece], 63 - (i * 8 + cur));
+				SET1(this->pieces[WHITE][piece], 63 - (i * 8 + cur));
 
 			cur++;
 		}
 	}
 
 	for (int i = 0; i < 6; i++) {
-		board.pieces[WHITE][ALL] |= board.pieces[WHITE][i];
-		board.pieces[BLACK][ALL] |= board.pieces[BLACK][i];
+		this->pieces[WHITE][ALL] |= this->pieces[WHITE][i];
+		this->pieces[BLACK][ALL] |= this->pieces[BLACK][i];
 	}
 }
-std::string bitboard::encode(const bitboard::Position &board) {
+bitboard::Position::Position(std::string fen) {
+	decode(fen);	
+}
+
+bitboard::Position &bitboard::Position::operator=(const Position &src) {
+	this->allPieces = src.allPieces;
+	memcpy(this->pieces, src.pieces, sizeof(this->pieces));
+	memcpy(this->mailbox, src.mailbox, sizeof(this->mailbox));
+
+	this->turn = src.turn;
+	this->enPassant = src.enPassant;
+	memcpy(this->castle, src.castle, sizeof(src.castle));
+
+	this->fiftyMoveClock = src.fiftyMoveClock;
+	this->fullMove = src.fullMove;
+
+	return *this;
+}
+bitboard::Position::Position(const Position &src) {
+	this->operator=(src);
+}
+
+std::string bitboard::Position::encode() const {
 	std::string fen = "";
 	for (int i = 0; i < 8; i++) {
 		int empty = 0;
 		for (int j = 0; j < 8; j++) {
 			int index = 63 - (i * 8 + j);
-			if (QUERY(board.allPieces, index)) {
+			if (QUERY(this->allPieces, index)) {
 				if (empty != 0)
 					fen += empty + '0';
 				empty = 0;
 				for (int k = 0; k < 6; k++) {
-					if (QUERY(board.pieces[WHITE][k], index)) {
+					if (QUERY(this->pieces[WHITE][k], index)) {
 						fen += bitboard::pieces[k];
 						break;
 					}
 				}
 				for (int k = 0; k < 6; k++) {
-					if (QUERY(board.pieces[BLACK][k], index)) {
+					if (QUERY(this->pieces[BLACK][k], index)) {
 						fen += bitboard::pieces[k + 6];
 						break;
 					}
@@ -149,82 +170,61 @@ std::string bitboard::encode(const bitboard::Position &board) {
 	}
 	fen += " ";
 
-	fen += board.turn ? 'b' : 'w';
+	fen += this->turn ? 'b' : 'w';
 	fen += " ";
 
 	std::string castle_rights = "";
-	if (board.castle[WHITE_SHORT])
+	if (this->castle[WHITE_SHORT])
 		castle_rights += "K";
-	if (board.castle[WHITE_LONG])
+	if (this->castle[WHITE_LONG])
 		castle_rights += "Q";
-	if (board.castle[BLACK_SHORT])
+	if (this->castle[BLACK_SHORT])
 		castle_rights += "k";
-	if (board.castle[BLACK_LONG])
+	if (this->castle[BLACK_LONG])
 		castle_rights += "q";
 	if (castle_rights == "")
 		castle_rights = "-";
 
 	fen += castle_rights + " ";
 
-	if (board.enPassant == -1)
+	if (this->enPassant == -1)
 		fen += "-";
 	else
-		fen += bitboard::squares[board.enPassant];
+		fen += bitboard::squares[this->enPassant];
 		
-	fen += " " + std::to_string(board.fiftyMoveClock);
-	fen += " " + std::to_string(board.fullMove);
+	fen += " " + std::to_string(this->fiftyMoveClock);
+	fen += " " + std::to_string(this->fullMove);
 
 	return fen;
 }
-
-void bitboard::copy_board(bitboard::Position &dest, const bitboard::Position &source) {
-	memcpy(&dest, &source, sizeof(Position));
-}
-
-void bitboard::print_board(const bitboard::Position &board) {
-	std::cout << "╭───┬───┬───┬───┬───┬───┬───┬───╮" << "\n";
+void bitboard::Position::print(std::ostream &out) const {
+	out << "╭───┬───┬───┬───┬───┬───┬───┬───╮" << "\n";
 
 	for (int i = 0; i < 8; i++) {
 		for (int j = 0; j < 8; j++) {
 			int index = 63 - (i * 8 + j);
-			// if (QUERY(board.all_pieces, index)) {
-			// 	for (int k = 0; k < 6; k++) {
-			// 		if (QUERY(board.pieces[0][k], index)) {
-			// 			std::cout << "│ " << bitboard::pieces[k] << " ";
-			// 			break;
-			// 		}
-			// 	}
-			// 	for (int k = 0; k < 6; k++) {
-			// 		if (QUERY(board.pieces[1][k], index)) {
-			// 			std::cout << "│ " << bitboard::pieces[k + 6] << " ";
-			// 			break;
-			// 		}
-			// 	}
-			// }
-			// else
-			// 	std::cout << "│   ";
-			if (board.mailbox[index] != -1)
-				std::cout << "│ " << bitboard::pieces[board.mailbox[index]] << " ";
+			if (this->mailbox[index] != -1)
+				out << "│ " << bitboard::pieces[this->mailbox[index]] << " ";
 			else
-				std::cout << "│   ";
+				out << "│   ";
 		}
 
-		std::cout << "│";
+		out << "│";
 
 		if (i < 7)
-			std::cout << "\n├───┼───┼───┼───┼───┼───┼───┼───┤\n";
+			out << "\n├───┼───┼───┼───┼───┼───┼───┼───┤\n";
 		else
-			std::cout << "\n╰───┴───┴───┴───┴───┴───┴───┴───╯\n";
+			out << "\n╰───┴───┴───┴───┴───┴───┴───┴───╯\n";
 	}
 
-	std::cout << "\nFEN: " << encode(board);
-	std::cout << "\nWhite Kingside: " << board.castle[WHITE_SHORT];
-	std::cout << "    White Queenside: " << board.castle[WHITE_LONG];
-	std::cout << "\nBlack Kingside: " << board.castle[BLACK_SHORT];
-	std::cout << "    Black Queenside: " << board.castle[BLACK_LONG];
+	out << "\nFEN: " << this->encode();
+	out << "\nWhite Kingside: " << this->castle[WHITE_SHORT];
+	out << "    White Queenside: " << this->castle[WHITE_LONG];
+	out << "\nBlack Kingside: " << this->castle[BLACK_SHORT];
+	out << "    Black Queenside: " << this->castle[BLACK_LONG];
 
-	std::cout << "\nEn Passant Square: " << (board.enPassant == -1 ? "None" : bitboard::squares[board.enPassant]);
-	std::cout << "\nTurn: " << (board.turn ? "Black" : "White");
+	out << "\nEn Passant Square: " << (this->enPassant == -1 ? "None" : bitboard::squares[this->enPassant]);
+	out << "\nTurn: " << (this->turn ? "Black" : "White");
 
-	std::cout << "\n";
+	out << "\n";
 }

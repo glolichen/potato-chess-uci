@@ -57,7 +57,9 @@ void table_insert(ull hash, TTResult result) {
 
 void search::table_clear() {
 	moveNum = 0;
+	mx.lock();
 	transposition.clear();
+	mx.unlock();
 }
 void search::table_clear_move() {
 	moveNum++;
@@ -99,8 +101,7 @@ int quiescence(const bitboard::Position &board, int alpha, int beta, int depth) 
 		if (board.mailbox[DEST(move)] == -1)
 			continue;
 
-		bitboard::Position newBoard;
-		bitboard::copy_board(newBoard, board);
+		bitboard::Position newBoard(board);
 		move::make_move(newBoard, move);
 
 		int score = quiescence(newBoard, -beta, -alpha, depth - 1);
@@ -182,8 +183,7 @@ void search::pvs(int &result, const bitboard::Position &board, int depth, int al
 	for (size_t i = 0; i < moves.size(); i++) {
 		int curMove = moves[i];
 
-		bitboard::Position newBoard;
-		bitboard::copy_board(newBoard, board);
+		bitboard::Position newBoard(board);
 		if (board.mailbox[DEST(curMove)] != -1 || board.mailbox[SOURCE(curMove)] == PAWN || board.mailbox[SOURCE(curMove)] == PAWN + 6)
 			newBoard.fiftyMoveClock = 0;
 		else
@@ -305,6 +305,9 @@ search::SearchResult search::search_by_time(const bitboard::Position &board, int
 	// but we can use alpha and beta values from before to speed up pruning
 	// and we can search the best move first in the deeper search
 
+	// problem: transposition table is being filled up with garbage when pondering
+	// search::table_clear();
+
 	topMoveNull = true;
 	secondBestEval = INT_MIN;
 	opponentResponses.clear();
@@ -423,29 +426,20 @@ search::SearchResult search::search_unlimited(const bitboard::Position &board) {
 	return { bestMove, opponentResponses[bestMove], depth, eval };
 }
 
-bool isPondering = false, ponderHit = false, willTerminate = false;
+bool isPondering = false, ponderHit = false;
 int ponderAfterTime = -1;
 void ponder_stop_thread(int) {
 	std::string line;
 	while (true) {
 		std::cin >> line;
-		// std::cout << line << "\n";
+		std::cout << "input in stop thread: " << line << "\n";
 		if (line == "ponderhit") {
 			std::cout << "ponderhit\n";
 			isPondering = false, ponderHit = true;
-			limit = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-			if (!willTerminate)
-				limit += ponderAfterTime;
+			limit = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() + ponderAfterTime;
 			break;
 		}
 		if (line == "stop") {
-			// since we have just consumed the last line with getline,
-			// and it is not ponderhit, we will need the input again in the main loop
-			// so we will put the new line back into stdin, along with all the characters
-			// this needs to be done in reverse order because putback adds to the back
-			// std::cin.putback('\n');
-			// for (int i = line.size() - 1; i >= 0; i--)
-			// 	std::cin.putback(line[i]);
 			std::cout << "not ponderhit\n";
 			limit = 0;
 			break;
@@ -456,7 +450,7 @@ search::SearchResult search::ponder(const bitboard::Position &board, int time_MS
 	opponentResponses.clear();
 	topMoveNull = true;
 
-	isPondering = false, ponderHit = false, willTerminate = false;
+	isPondering = false, ponderHit = false;
 	ponderAfterTime = time_MS;
 
 	limit = ULLONG_MAX;
@@ -493,13 +487,11 @@ search::SearchResult search::ponder(const bitboard::Position &board, int time_MS
 				std::cout << "break at depth 7 in search::ponder\n";
 				if (!isPondering)
 					break;
-				willTerminate = true;
 			}
 			if (depth >= 6 && (secondBestEval == INT_MIN || eval - secondBestEval >= 150)) {
 				std::cout << "break at depth 6 in search::ponder\n";
 				if (!isPondering)
 					break;
-				willTerminate = true;
 			}
 		}
 

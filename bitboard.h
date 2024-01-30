@@ -7,8 +7,8 @@
 #include <unordered_set>
 
 #define SET1(bitboard, pos) (bitboard |= 1ull << (pos))
-#define SET0(bitboard, pos) (bitboard ^= 1ull << (pos))
-#define QUERY(bitboard, pos) (bitboard >> (pos) & 1)
+#define SET0(bitboard, pos) (bitboard &= (0xffffffffffffffff ^ (1ull << (pos))))
+#define QUERY(bitboard, pos) ((bitboard >> (pos)) & 1)
 
 using ull = unsigned long long;
 enum Color { WHITE, BLACK };
@@ -26,7 +26,8 @@ enum Squares {
 };
 
 namespace bitboard {
-	struct Position {
+	class Position {
+	public:
 		ull allPieces;
 		ull pieces[2][7];
 		int mailbox[64];
@@ -37,23 +38,21 @@ namespace bitboard {
 
 		int fiftyMoveClock;
 		int fullMove;
-	};
 
-	extern Position board;
+		void decode(std::string fen);
+		Position(std::string fen);
+
+		bitboard::Position &operator=(const Position &src);
+		Position(const Position &src);
+
+		std::string encode() const;
+		void print(std::ostream &out) const;
+	};
 	
 	extern std::string squares[];
 	extern std::string pieces;
 
 	extern std::unordered_set<ull> prevPositions;
-
-	std::vector<std::string> split(const std::string str, char splitOn);
-
-	void decode(std::string fen);
-	std::string encode(const Position &board);
-
-	void copy_board(Position &dest, const Position &source);
-
-	void print_board(const Position &board);
 }
 
 #endif
