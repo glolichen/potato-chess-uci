@@ -29,6 +29,7 @@ ull movegen::get_pawn_attacks(int square, bool color) {
 			SET1(attacks, square - 7);
 	}
 	else {
+		// what to do if square + 7 >= 64?
 		if (square % 8 > 0)
 			SET1(attacks, square + 7);
 		if (square % 8 < 7)
@@ -328,15 +329,17 @@ void movegen::move_gen(const bitboard::Position &board, std::vector<int> &moves)
 				else {
 					ull left = board.allPieces & maps::rook[center][3];
 					ull right = board.allPieces & maps::rook[center - 1][1];
-					int leftPiece = __builtin_ctzll(left);
-					int rightPiece = 63 - __builtin_clzll(right);
-					
-					int oppRook = ROOK + (board.turn ? 0 : 6);
-					int oppQueen = QUEEN + (board.turn ? 0 : 6);
-					if (leftPiece == kingPos && (board.mailbox[rightPiece] == oppRook || board.mailbox[rightPiece] == oppQueen))
-						ok = false;
-					else if (rightPiece == kingPos && (board.mailbox[leftPiece] == oppRook || board.mailbox[leftPiece] == oppQueen))
-						ok = false;
+					if (left && right) {
+						int leftPiece = __builtin_ctzll(left);
+						int rightPiece = 63 - __builtin_clzll(right);
+
+						int oppRook = ROOK + (board.turn ? 0 : 6);
+						int oppQueen = QUEEN + (board.turn ? 0 : 6);
+						if (leftPiece == kingPos && (board.mailbox[rightPiece] == oppRook || board.mailbox[rightPiece] == oppQueen))
+							ok = false;
+						else if (rightPiece == kingPos && (board.mailbox[leftPiece] == oppRook || board.mailbox[leftPiece] == oppQueen))
+							ok = false;
+					}
 				}
 				if (ok)
 					moves.push_back(NEW_MOVE(center - 1, board.enPassant, 0, 0, 1));
@@ -352,15 +355,17 @@ void movegen::move_gen(const bitboard::Position &board, std::vector<int> &moves)
 				else {
 					ull left = board.allPieces & maps::rook[center + 1][3];
 					ull right = board.allPieces & maps::rook[center][1];
-					int leftPiece = __builtin_ctzll(left);
-					int rightPiece = 63 - __builtin_clzll(right);
-					
-					int oppRook = ROOK + (board.turn ? 0 : 6);
-					int oppQueen = QUEEN + (board.turn ? 0 : 6);
-					if (leftPiece == kingPos && (board.mailbox[rightPiece] == oppRook || board.mailbox[rightPiece] == oppQueen))
-						ok = false;
-					else if (rightPiece == kingPos && (board.mailbox[leftPiece] == oppRook || board.mailbox[leftPiece] == oppQueen))
-						ok = false;
+					if (left && right) {
+						int leftPiece = __builtin_ctzll(left);
+						int rightPiece = 63 - __builtin_clzll(right);
+						
+						int oppRook = ROOK + (board.turn ? 0 : 6);
+						int oppQueen = QUEEN + (board.turn ? 0 : 6);
+						if (leftPiece == kingPos && (board.mailbox[rightPiece] == oppRook || board.mailbox[rightPiece] == oppQueen))
+							ok = false;
+						else if (rightPiece == kingPos && (board.mailbox[leftPiece] == oppRook || board.mailbox[leftPiece] == oppQueen))
+							ok = false;
+					}
 				}
 				if (ok)
 					moves.push_back(NEW_MOVE(center + 1, board.enPassant, 0, 0, 1));
