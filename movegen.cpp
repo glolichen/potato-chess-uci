@@ -23,16 +23,15 @@ ull get_pawn_moves(const bitboard::Position &board, int square) {
 ull movegen::get_pawn_attacks(int square, bool color) {
 	ull attacks = 0;
 	if (color) {
-		if (square % 8 > 0)
+		if (square % 8 > 0 && square >= 9)
 			SET1(attacks, square - 9);
-		if (square % 8 < 7)
+		if (square % 8 < 7 && square >= 7)
 			SET1(attacks, square - 7);
 	}
 	else {
-		// what to do if square + 7 >= 64?
-		if (square % 8 > 0)
+		if (square % 8 > 0 && square < 57)
 			SET1(attacks, square + 7);
-		if (square % 8 < 7)
+		if (square % 8 < 7 && square < 55)
 			SET1(attacks, square + 9);
 	}
 	return attacks;
