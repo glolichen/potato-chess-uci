@@ -432,7 +432,6 @@ void ponder_stop_thread(int) {
 	std::string line;
 	while (true) {
 		std::cin >> line;
-		std::cout << "input in stop thread: " << line << "\n";
 		if (line == "ponderhit") {
 			std::cout << "ponderhit\n";
 			isPondering = false, ponderHit = true;

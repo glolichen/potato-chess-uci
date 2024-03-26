@@ -46,7 +46,7 @@ namespace bitboard {
 		Position(const Position &src);
 
 		std::string encode() const;
-		void print(std::ostream &out) const;
+		void print() const;
 	};
 	
 	extern std::string squares[];

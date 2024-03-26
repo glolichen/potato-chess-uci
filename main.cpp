@@ -6,6 +6,7 @@
 #include <fstream>
 #include <unordered_map>
 #include <vector>
+#include <istream>
 
 #include <cstdlib>
 
@@ -20,9 +21,50 @@
 #include "book.h"
 #include "timeman.h"
 
+#define LOG_DIR "/home/jayden/Desktop/Programs/potato-chess/logs/"
+
 const std::string START_POS = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
+// https://stackoverflow.com/a/674120
+class OutputStream : public std::ostream {
+private:
+	bool is_logging;
+public:
+	OutputStream(std::string file) {
+		is_logging = true;
+		std::freopen(file.c_str(), "w", stderr);
+	}
+	OutputStream() {
+		is_logging = false;
+	}
+
+	// log output
+	template <class T>
+	OutputStream &operator<<(const T &v) {
+		std::cout << v;
+		if (is_logging)
+			std::cerr << time(0) << " O: " << v;
+		return *this;
+	}
+
+	// log input
+	void log_input(const std::string text) {
+		if (is_logging)
+			std::cerr << time(0) << " I: " << text << "\n";
+	}
+};
+
+OutputStream *outputter;
+
 int main() {
+	#ifdef LOG_DIR
+		std::stringstream log_file_dir;
+		log_file_dir << LOG_DIR << "log" << time(0) << ".txt";
+		outputter = new OutputStream(log_file_dir.str());
+	#else
+		outputter = new OutputStream();
+	#endif
+
 	srand(time(0));
 
 	maps::init();
@@ -45,9 +87,7 @@ int main() {
 		std::string line;
 		getline(std::cin, line);
 
-		// std::cout << line << "\n";
-		// if (line == "")
-		// 	continue;
+		outputter->log_input(line);
 
 		std::stringstream ss(line);
 		
@@ -55,9 +95,9 @@ int main() {
 		ss >> token;
 
 		if (token == "isready")
-			std::cout << "readyok\n";
+			*outputter << "readyok\n";
 		else if (token == "uci")
-			std::cout << "id name Potato Chess\nid author Jayden Li\noption name Move Overhead type spin default 10 min 0 max 5000\nuciok\n";
+			*outputter << "id name Potato Chess\nid author Jayden Li\noption name Move Overhead type spin default 10 min 0 max 5000\nuciok\n";
 		else if (token == "position") {
 			totalHalfMoves = 0;
 			ss >> token;
@@ -83,9 +123,6 @@ int main() {
 						move::make_move(board, move);
 						bitboard::prevPositions.emplace(hash::get_hash(board));
 						totalHalfMoves++;
-
-						// std::cout << move::to_string(move) << "\n";
-						// bitboard::print_board(bitboard::board);
 					}
 				}
 			}
@@ -108,9 +145,9 @@ int main() {
 					int depth;
 					ss >> depth;
 					perft::PerftResult result = perft::test(board, depth);
-					std::cout << "total nodes: " << result.totalNodes << "\n";
-					std::cout << "time: " << result.time << "ms\n";
-					std::cout << "nodes per second: " << (result.totalNodes / result.time * 1000) << "\n";
+					*outputter << "total nodes: " << result.totalNodes << "\n";
+					*outputter << "time: " << result.time << "ms\n";
+					*outputter << "nodes per second: " << (result.totalNodes / result.time * 1000) << "\n";
 					goto skip;
 				}
 				else if (token == "depth")
@@ -135,18 +172,18 @@ int main() {
 				time = std::max(100, time);
 				result = search::ponder(board, time);
 
-				// std::cout << result.move << "\n";
+				// *outputter << result.move << "\n";
 				if (result.move == -1) {
 					board = oldBoard;
-					std::cout << "bestmove " << move::to_string(lastResult.move);
-					std::cout << " ponder " << move::to_string(lastResult.ponder) << "\n";
+					*outputter << "bestmove " << move::to_string(lastResult.move);
+					*outputter << " ponder " << move::to_string(lastResult.ponder) << "\n";
 					goto skip;
 				}
 			}
 			else {
 				int bookMove = book::book_move(board);
 				if (bookMove != -1) {
-					std::cout << "bestmove " << move::to_string(bookMove) << "\n";
+					*outputter << "bestmove " << move::to_string(bookMove) << "\n";
 					continue;
 				}
 				
@@ -173,11 +210,11 @@ int main() {
 
 			lastResult = result;
 
-			std::cout << "bestmove " << move::to_string(bestMove);
-			// if (ponderMove != -1 && ponderMove != 0)
-			// 	std::cout << " ponder " << move::to_string(ponderMove) << "\n";
-			// else
-				std::cout << "\n";
+			*outputter << "bestmove " << move::to_string(bestMove);
+			if (ponderMove != -1 && ponderMove != 0)
+				*outputter << " ponder " << move::to_string(ponderMove) << "\n";
+			else
+				*outputter << "\n";
 		}
 		else if (token == "setoption") {
 			std::string optionName;
@@ -200,16 +237,16 @@ int main() {
 		}
 		// polyglot (opening book system) key
 		else if (token == "pgkey")
-			std::cout << book::gen_polyglot_key(board) << "\n";
+			*outputter << book::gen_polyglot_key(board) << "\n";
 		else if (token == "bookmove") {
 			int move = book::book_move(board);
 			if (move == -1)
-				std::cout << "no book move found for this position\n";
+				*outputter << "no book move found for this position\n";
 			else
-				std::cout << move::to_string(move) << "\n";
+				*outputter << move::to_string(move) << "\n";
 		}
 		else if (token == "print")
-			board.print(std::cout);
+			board.print();
 		else if (token == "quit")
 			break;
 		else if (token == "ucinewgame")

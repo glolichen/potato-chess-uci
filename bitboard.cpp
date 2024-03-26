@@ -197,34 +197,34 @@ std::string bitboard::Position::encode() const {
 
 	return fen;
 }
-void bitboard::Position::print(std::ostream &out) const {
-	out << "╭───┬───┬───┬───┬───┬───┬───┬───╮" << "\n";
+void bitboard::Position::print() const {
+	std::cout << "╭───┬───┬───┬───┬───┬───┬───┬───╮" << "\n";
 
 	for (int i = 0; i < 8; i++) {
 		for (int j = 0; j < 8; j++) {
 			int index = 63 - (i * 8 + j);
 			if (this->mailbox[index] != -1)
-				out << "│ " << bitboard::pieces[this->mailbox[index]] << " ";
+				std::cout << "│ " << bitboard::pieces[this->mailbox[index]] << " ";
 			else
-				out << "│   ";
+				std::cout << "│   ";
 		}
 
-		out << "│";
+		std::cout << "│";
 
 		if (i < 7)
-			out << "\n├───┼───┼───┼───┼───┼───┼───┼───┤\n";
+			std::cout << "\n├───┼───┼───┼───┼───┼───┼───┼───┤\n";
 		else
-			out << "\n╰───┴───┴───┴───┴───┴───┴───┴───╯\n";
+			std::cout << "\n╰───┴───┴───┴───┴───┴───┴───┴───╯\n";
 	}
 
-	out << "\nFEN: " << this->encode();
-	out << "\nWhite Kingside: " << this->castle[WHITE_SHORT];
-	out << "    White Queenside: " << this->castle[WHITE_LONG];
-	out << "\nBlack Kingside: " << this->castle[BLACK_SHORT];
-	out << "    Black Queenside: " << this->castle[BLACK_LONG];
+	std::cout << "\nFEN: " << this->encode();
+	std::cout << "\nWhite Kingside: " << this->castle[WHITE_SHORT];
+	std::cout << "    White Queenside: " << this->castle[WHITE_LONG];
+	std::cout << "\nBlack Kingside: " << this->castle[BLACK_SHORT];
+	std::cout << "    Black Queenside: " << this->castle[BLACK_LONG];
 
-	out << "\nEn Passant Square: " << (this->enPassant == -1 ? "None" : bitboard::squares[this->enPassant]);
-	out << "\nTurn: " << (this->turn ? "Black" : "White");
+	std::cout << "\nEn Passant Square: " << (this->enPassant == -1 ? "None" : bitboard::squares[this->enPassant]);
+	std::cout << "\nTurn: " << (this->turn ? "Black" : "White");
 
-	out << "\n";
+	std::cout << "\n";
 }
