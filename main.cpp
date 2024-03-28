@@ -21,6 +21,7 @@
 #include "timeman.h"
 #include "logger.h"
 
+#define PONDER false
 #define LOG_DIR "/home/jayden/Desktop/Programs/potato-chess/logs/"
 
 const std::string START_POS = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
@@ -179,7 +180,7 @@ int main() {
 
 			lastResult = result;
 
-			if (ponderMove != -1 && ponderMove != 0)
+			if (ponderMove != -1 && ponderMove != 0 && PONDER)
 				logger::log_output(std::format("bestmove {} ponder {}", move::to_string(bestMove), move::to_string(ponderMove)));
 			else
 				logger::log_output(std::format("bestmove {}", move::to_string(bestMove)));

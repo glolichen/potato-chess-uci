@@ -2,7 +2,7 @@
 
 #include "timeman.h"
 
-#define BASE_TIME_PCT 0.04
+#define BASE_TIME_PCT 0.03
 
 // values calculated by desmos: https://www.desmos.com/calculator/57lwlgtxv8
 // rough curve shape from lc0's old time algorithm: https://lczero.org/blog/2018/09/time-management/

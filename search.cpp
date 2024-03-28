@@ -332,14 +332,14 @@ search::SearchResult search::search_by_time(const bitboard::Position &board, int
 		if (isMate != -1) {
 			score_stream << "mate ";
 			if (eval > 0) {
-				score_stream << (int) ((INT_MAX - eval) / 2.0 + 0.5) << "\n";
+				score_stream << (int) ((INT_MAX - eval) / 2.0 + 0.5);
 				break;
 			}
 			else
-				score_stream << "-" << (int) ((eval - INT_MIN_PLUS_1 - 1) / 2.0 + 0.5) << "\n";
+				score_stream << "-" << (int) ((eval - INT_MIN_PLUS_1 - 1) / 2.0 + 0.5);
 		}
 		else
-			score_stream << "cp " << eval << "\n";
+			score_stream << "cp " << eval;
 
 		logger::log_output(std::format("info depth {} nodes {} currmove {} score {}",
 			std::to_string(depth), nodes, move::to_string(bestMove), score_stream.str()));
@@ -378,12 +378,12 @@ search::SearchResult search::search_by_depth(const bitboard::Position &board, in
 	if (isMate != -1) {
 		score_stream << "mate ";
 		if (eval > 0)
-			score_stream << (int) ((INT_MAX - eval) / 2.0 + 0.5) << "\n";
+			score_stream << (int) ((INT_MAX - eval) / 2.0 + 0.5);
 		else
-			score_stream << "-" << (int) ((eval - INT_MIN_PLUS_1 - 1) / 2.0 + 0.5) << "\n";
+			score_stream << "-" << (int) ((eval - INT_MIN_PLUS_1 - 1) / 2.0 + 0.5);
 	}
 	else
-		score_stream << "cp " << eval << "\n";
+		score_stream << "cp " << eval;
 
 	logger::log_output(std::format("info depth {} nodes {} currmove {} score {}",
 		std::to_string(depth), nodes, move::to_string(bestMove), score_stream.str()));
@@ -413,12 +413,12 @@ search::SearchResult search::search_unlimited(const bitboard::Position &board) {
 		if (isMate != -1) {
 			score_stream << "mate ";
 			if (eval > 0)
-				score_stream << (int) ((INT_MAX - eval) / 2.0 + 0.5) << "\n";
+				score_stream << (int) ((INT_MAX - eval) / 2.0 + 0.5);
 			else
-				score_stream << "-" << (int) ((eval - INT_MIN_PLUS_1 - 1) / 2.0 + 0.5) << "\n";
+				score_stream << "-" << (int) ((eval - INT_MIN_PLUS_1 - 1) / 2.0 + 0.5);
 		}
 		else
-			score_stream << "cp " << eval << "\n";
+			score_stream << "cp " << eval;
 		
 		logger::log_output(std::format("info depth {} nodes {} currmove {} score {}",
 			std::to_string(depth), nodes, move::to_string(bestMove), score_stream.str()));
@@ -476,12 +476,12 @@ search::SearchResult search::ponder(const bitboard::Position &board, int time_MS
 		if (isMate != -1) {
 			score_stream << "mate ";
 			if (eval > 0)
-				score_stream << (int) ((INT_MAX - eval) / 2.0 + 0.5) << "\n";
+				score_stream << (int) ((INT_MAX - eval) / 2.0 + 0.5);
 			else
-				score_stream << "-" << (int) ((eval - INT_MIN_PLUS_1 - 1) / 2.0 + 0.5) << "\n";
+				score_stream << "-" << (int) ((eval - INT_MIN_PLUS_1 - 1) / 2.0 + 0.5);
 		}
 		else
-			score_stream << "cp " << eval << "\n";
+			score_stream << "cp " << eval;
 
 		logger::log_output(std::format("info depth {} nodes {} currmove {} score {}",
 			std::to_string(depth), nodes, move::to_string(bestMove), score_stream.str()));
