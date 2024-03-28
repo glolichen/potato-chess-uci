@@ -13,6 +13,7 @@
 #include "hash.h"
 #include "maps.h"
 #include "movegen.h"
+#include "logger.h"
 #include "search.h"
 
 #include "ctpl_stl.h"
@@ -270,11 +271,8 @@ void search::pvs(int &result, const bitboard::Position &board, int depth, int al
 
 	if (depth_from_start == 0)
 		bestMove = topMove;
-	if (depth_from_start == 1) {
-		// bitboard::print_board(board);
-		// std::cout << depth << " " << move::to_string(last_move) << " " << move::to_string(topMove) << "\n";
+	if (depth_from_start == 1)
 		opponentResponses.insert({ last_move, topMove });
-	}
 
 	result = alpha;
 	
@@ -328,35 +326,36 @@ search::SearchResult search::search_by_time(const bitboard::Position &board, int
 			depth--;
 			break;
 		}
-
-		std::cout << "info depth " << std::to_string(depth) << " nodes " << nodes << " currmove " << move::to_string(bestMove) << " score ";
-
-		// checkmate has been found, do not need to search any more
+		
+		std::stringstream score_stream;
 		int isMate = search::eval_is_mate(eval);
 		if (isMate != -1) {
-			std::cout << "mate ";
+			score_stream << "mate ";
 			if (eval > 0) {
-				std::cout << (int) ((INT_MAX - eval) / 2.0 + 0.5) << "\n";
+				score_stream << (int) ((INT_MAX - eval) / 2.0 + 0.5) << "\n";
 				break;
 			}
 			else
-				std::cout << "-" << (int) ((eval - INT_MIN_PLUS_1 - 1) / 2.0 + 0.5) << "\n";
+				score_stream << "-" << (int) ((eval - INT_MIN_PLUS_1 - 1) / 2.0 + 0.5) << "\n";
 		}
 		else
-			std::cout << "cp " << eval << "\n";
+			score_stream << "cp " << eval << "\n";
+
+		logger::log_output(std::format("info depth {} nodes {} currmove {} score {}",
+			std::to_string(depth), nodes, move::to_string(bestMove), score_stream.str()));
 
 		if (!full_search && !extensionBonus && prevBestMove == bestMove) {
 			if (depth >= 7 && (secondBestEval == INT_MIN || eval - secondBestEval >= 100)) {
-				std::cout << "break at depth 7 in search::search_by_time\n";
+				logger::log_output_silent("break at depth 7 in search::search_by_time");
 				break;
 			}
 			if (depth >= 6 && (secondBestEval == INT_MIN || eval - secondBestEval >= 150)) {
-				std::cout << "break at depth 6 in search::search_by_time\n";
+				logger::log_output_silent("break at depth 6 in search::search_by_time");
 				break;
 			}
 		}
 		if (depth >= 5 && bestMove != prevBestMove && std::abs(eval - prevEval) > 150 && !extensionBonus) {
-			std::cout << "extension granted in search::search_by_time\n";
+			logger::log_output_silent("extension granted in search::search_by_time");
 			extensionBonus = true;
 			limit += 1.5 * time_MS;
 		}
@@ -374,18 +373,20 @@ search::SearchResult search::search_by_depth(const bitboard::Position &board, in
 	int eval = 0;
 	search::pvs(eval, board, depth, INT_MIN_PLUS_1 + 2, INT_MAX - 2, -1, 0, true);
 
-	std::cout << "info depth " << std::to_string(depth) << " nodes " << nodes << " currmove " << move::to_string(bestMove) << " score ";
-
+	std::stringstream score_stream;
 	int isMate = search::eval_is_mate(eval);
 	if (isMate != -1) {
-		std::cout << "mate ";
+		score_stream << "mate ";
 		if (eval > 0)
-			std::cout << (int) ((INT_MAX - eval) / 2.0 + 0.5) << "\n";
+			score_stream << (int) ((INT_MAX - eval) / 2.0 + 0.5) << "\n";
 		else
-			std::cout << "-" << (int) ((eval - INT_MIN_PLUS_1 - 1) / 2.0 + 0.5) << "\n";
+			score_stream << "-" << (int) ((eval - INT_MIN_PLUS_1 - 1) / 2.0 + 0.5) << "\n";
 	}
 	else
-		std::cout << "cp " << eval << "\n";
+		score_stream << "cp " << eval << "\n";
+
+	logger::log_output(std::format("info depth {} nodes {} currmove {} score {}",
+		std::to_string(depth), nodes, move::to_string(bestMove), score_stream.str()));
 
 	return { bestMove, opponentResponses[bestMove], depth, eval };
 }
@@ -407,18 +408,20 @@ search::SearchResult search::search_unlimited(const bitboard::Position &board) {
 			break;
 		}
 
-		std::cout << "info depth " << std::to_string(depth) << " nodes " << nodes << " currmove " << move::to_string(bestMove) << " score ";
-
+		std::stringstream score_stream;
 		int isMate = search::eval_is_mate(eval);
 		if (isMate != -1) {
-			std::cout << "mate ";
+			score_stream << "mate ";
 			if (eval > 0)
-				std::cout << (int) ((INT_MAX - eval) / 2.0 + 0.5) << "\n";
+				score_stream << (int) ((INT_MAX - eval) / 2.0 + 0.5) << "\n";
 			else
-				std::cout << "-" << (int) ((eval - INT_MIN_PLUS_1 - 1) / 2.0 + 0.5) << "\n";
+				score_stream << "-" << (int) ((eval - INT_MIN_PLUS_1 - 1) / 2.0 + 0.5) << "\n";
 		}
 		else
-			std::cout << "cp " << eval << "\n";
+			score_stream << "cp " << eval << "\n";
+		
+		logger::log_output(std::format("info depth {} nodes {} currmove {} score {}",
+			std::to_string(depth), nodes, move::to_string(bestMove), score_stream.str()));
 
 		depth++;
 	}
@@ -433,13 +436,13 @@ void ponder_stop_thread(int) {
 	while (true) {
 		std::cin >> line;
 		if (line == "ponderhit") {
-			std::cout << "ponderhit\n";
+			logger::log_output_silent("ponderhit");
 			isPondering = false, ponderHit = true;
 			limit = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() + ponderAfterTime;
 			break;
 		}
 		if (line == "stop") {
-			std::cout << "not ponderhit\n";
+			logger::log_output_silent("not ponderhit");
 			limit = 0;
 			break;
 		}
@@ -468,27 +471,29 @@ search::SearchResult search::ponder(const bitboard::Position &board, int time_MS
 			break;
 		}
 
-		std::cout << "info depth " << std::to_string(depth) << " nodes " << nodes << " currmove " << move::to_string(bestMove) << " score ";
-
+		std::stringstream score_stream;
 		int isMate = search::eval_is_mate(eval);
 		if (isMate != -1) {
-			std::cout << "mate ";
+			score_stream << "mate ";
 			if (eval > 0)
-				std::cout << (int) ((INT_MAX - eval) / 2.0 + 0.5) << "\n";
+				score_stream << (int) ((INT_MAX - eval) / 2.0 + 0.5) << "\n";
 			else
-				std::cout << "-" << (int) ((eval - INT_MIN_PLUS_1 - 1) / 2.0 + 0.5) << "\n";
+				score_stream << "-" << (int) ((eval - INT_MIN_PLUS_1 - 1) / 2.0 + 0.5) << "\n";
 		}
 		else
-			std::cout << "cp " << eval << "\n";
+			score_stream << "cp " << eval << "\n";
+
+		logger::log_output(std::format("info depth {} nodes {} currmove {} score {}",
+			std::to_string(depth), nodes, move::to_string(bestMove), score_stream.str()));
 
 		if (!extensionBonus && prevBestMove == bestMove) {
 			if (depth >= 7 && (secondBestEval == INT_MIN || eval - secondBestEval >= 100)) {
-				std::cout << "break at depth 7 in search::ponder\n";
+				logger::log_output_silent("break at depth 7 in search::ponder");
 				if (!isPondering)
 					break;
 			}
 			if (depth >= 6 && (secondBestEval == INT_MIN || eval - secondBestEval >= 150)) {
-				std::cout << "break at depth 6 in search::ponder\n";
+				logger::log_output_silent("break at depth 6 in search::ponder");
 				if (!isPondering)
 					break;
 			}

@@ -1,10 +1,12 @@
 #include <iostream>
+#include <format>
 #include <sstream>
 #include <string>
 
 #include "bitboard.h"
 #include "move.h"
 #include "hash.h"
+#include "logger.h"
 
 std::string move::to_string(int move) {
 	std::stringstream ss;
@@ -136,11 +138,13 @@ void move::make_move(bitboard::Position &board, int move) {
 	else {
 		SET1(board.allPieces, dest);
 		SET0(board.allPieces, source);
+		// logger::log_output_silent(std::format("{} {} {} {}", board.turn, source, dest, board.mailbox[dest]));
 		if (board.turn) {
 			if (board.mailbox[dest] != -1) {
 				SET0(board.pieces[WHITE][board.mailbox[dest]], dest);
 				SET0(board.pieces[WHITE][ALL], dest);
 			}
+
 			SET1(board.pieces[BLACK][board.mailbox[source] - 6], dest);
 			SET0(board.pieces[BLACK][board.mailbox[source] - 6], source);
 			SET1(board.pieces[BLACK][ALL], dest);

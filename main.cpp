@@ -7,7 +7,6 @@
 #include <unordered_map>
 #include <vector>
 #include <istream>
-
 #include <cstdlib>
 
 #include "bitboard.h"
@@ -26,15 +25,13 @@
 
 const std::string START_POS = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
-logger::Logger *logg;
-
 int main() {
 	#ifdef LOG_DIR
-		std::stringstream log_file_dir;
-		log_file_dir << LOG_DIR << "log" << time(0) << ".txt";
-		logg = logger::Logger::get_instance(log_file_dir.str());
+		std::stringstream log_file;
+		log_file << LOG_DIR << "log" << time(0) << ".txt";
+		logger::init(log_file.str());
 	#else
-		logg = logger::Logger::get_instance();
+		logger::init();
 	#endif
 
 	srand(time(0));
@@ -59,7 +56,7 @@ int main() {
 		std::string line;
 		getline(std::cin, line);
 
-		logg->log_input(line);
+		logger::log_input(line);
 
 		std::stringstream ss(line);
 		
@@ -67,9 +64,9 @@ int main() {
 		ss >> token;
 
 		if (token == "isready")
-			*logg << "readyok\n";
+			logger::log_output("readyok");
 		else if (token == "uci")
-			*logg << "id name Potato Chess\nid author Jayden Li\noption name Move Overhead type spin default 10 min 0 max 5000\nuciok\n";
+			logger::log_output("id name Potato Chess\nid author Jayden Li\noption name Move Overhead type spin default 10 min 0 max 5000\nuciok");
 		else if (token == "position") {
 			totalHalfMoves = 0;
 			ss >> token;
@@ -117,9 +114,9 @@ int main() {
 					int depth;
 					ss >> depth;
 					perft::PerftResult result = perft::test(board, depth);
-					*logg << "total nodes: " << result.totalNodes << "\n";
-					*logg << "time: " << result.time << "ms\n";
-					*logg << "nodes per second: " << (result.totalNodes / result.time * 1000) << "\n";
+					logger::log_output(std::format("total nodes: {}", result.totalNodes));
+					logger::log_output(std::format("time: {}ms", result.time));
+					logger::log_output(std::format("nodes per second: {}", result.totalNodes / result.time * 1000));
 					goto skip;
 				}
 				else if (token == "depth")
@@ -137,8 +134,8 @@ int main() {
 					inc = 0;
 
 				oldBoard = board;
-				move::make_move(board, lastResult.move);
-				move::make_move(board, lastResult.ponder);
+				// move::make_move(board, lastResult.move);
+				// move::make_move(board, lastResult.ponder);
 
 				int time = timeman::calc_base_time(remainingTime, totalHalfMoves / 2) - options["Move Overhead"];
 				time = std::max(100, time);
@@ -147,15 +144,15 @@ int main() {
 				// *outputter << result.move << "\n";
 				if (result.move == -1) {
 					board = oldBoard;
-					*logg << "bestmove " << move::to_string(lastResult.move);
-					*logg << " ponder " << move::to_string(lastResult.ponder) << "\n";
+					logger::log_output(std::format("bestmove {} ponder {}",
+						move::to_string(lastResult.move), move::to_string(lastResult.ponder)));
 					goto skip;
 				}
 			}
 			else {
 				int bookMove = book::book_move(board);
 				if (bookMove != -1) {
-					*logg << "bestmove " << move::to_string(bookMove) << "\n";
+					logger::log_output(std::format("bestmove {}", move::to_string(bookMove)));
 					continue;
 				}
 				
@@ -182,11 +179,10 @@ int main() {
 
 			lastResult = result;
 
-			*logg << "bestmove " << move::to_string(bestMove);
 			if (ponderMove != -1 && ponderMove != 0)
-				*logg << " ponder " << move::to_string(ponderMove) << "\n";
+				logger::log_output(std::format("bestmove {} ponder {}", move::to_string(bestMove), move::to_string(ponderMove)));
 			else
-				*logg << "\n";
+				logger::log_output(std::format("bestmove {}", move::to_string(bestMove)));
 		}
 		else if (token == "setoption") {
 			std::string optionName;
@@ -209,13 +205,13 @@ int main() {
 		}
 		// polyglot (opening book system) key
 		else if (token == "pgkey")
-			*logg << book::gen_polyglot_key(board) << "\n";
+			logger::log_output(std::to_string(book::gen_polyglot_key(board)));
 		else if (token == "bookmove") {
 			int move = book::book_move(board);
 			if (move == -1)
-				*logg << "no book move found for this position\n";
+				logger::log_output("no book move found for this position");
 			else
-				*logg << move::to_string(move) << "\n";
+				logger::log_output(move::to_string(move));
 		}
 		else if (token == "print")
 			board.print();
@@ -224,6 +220,8 @@ int main() {
 		else if (token == "ucinewgame")
 			search::table_clear();
 	}
+
+	logger::close();
 
 	return 0;
 }

@@ -119,12 +119,16 @@ bitboard::Position::Position(std::string fen) {
 
 bitboard::Position &bitboard::Position::operator=(const Position &src) {
 	this->allPieces = src.allPieces;
-	memcpy(this->pieces, src.pieces, sizeof(this->pieces));
-	memcpy(this->mailbox, src.mailbox, sizeof(this->mailbox));
+
+	this->pieces = src.pieces;
+	this->mailbox = src.mailbox;
+	// memcpy(this->pieces, src.pieces, sizeof(this->pieces));
+	// memcpy(this->mailbox, src.mailbox, sizeof(this->mailbox));
 
 	this->turn = src.turn;
 	this->enPassant = src.enPassant;
-	memcpy(this->castle, src.castle, sizeof(src.castle));
+	this->castle = src.castle;
+	// memcpy(this->castle, src.castle, sizeof(src.castle));
 
 	this->fiftyMoveClock = src.fiftyMoveClock;
 	this->fullMove = src.fullMove;

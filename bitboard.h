@@ -2,6 +2,7 @@
 #define BITBOARD_H
 
 #include <string>
+#include <array>
 #include <vector>
 #include <map>
 #include <unordered_set>
@@ -29,12 +30,12 @@ namespace bitboard {
 	class Position {
 	public:
 		ull allPieces;
-		ull pieces[2][7];
-		int mailbox[64];
+		std::array<std::array<ull, 7>, 2> pieces;
+		std::array<int, 64> mailbox;
 
 		bool turn;
 		int enPassant;
-		bool castle[4];
+		std::array<bool, 4> castle;
 
 		int fiftyMoveClock;
 		int fullMove;
