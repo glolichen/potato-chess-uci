@@ -247,5 +247,5 @@ int eval::evaluate(const bitboard::Position &board) {
 	int midPhase = std::min(gamePhase, 24);
 	int endPhase = 24 - midPhase;
 
-	return (midgameScore * midPhase + endgameScore * endPhase) / 24;
+	return -(midgameScore * midPhase + endgameScore * endPhase) / 24;
 }
